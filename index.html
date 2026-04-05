@@ -42,6 +42,83 @@
       --fade-duration: 300ms;
     }
 
+    /* ---- Mode Select Screen ---- */
+    .mode-select {
+      position: fixed; inset: 0; display: flex;
+      align-items: center; justify-content: center;
+      background: var(--bg-dark); z-index: 200;
+      transition: opacity var(--fade-duration);
+    }
+    .mode-select--hidden { opacity: 0; pointer-events: none; }
+    .mode-select__panel {
+      text-align: center; max-width: 340px; width: 90%;
+    }
+    .mode-select__title {
+      font-size: 1.2rem; color: var(--text-gold); margin-bottom: 6px;
+      text-shadow: 0 0 8px rgba(255,200,0,0.6), 0 0 20px rgba(255,200,0,0.3);
+    }
+    .mode-select__subtitle {
+      font-size: 0.45rem; color: var(--text-secondary); margin-bottom: 28px;
+    }
+    .mode-select__buttons {
+      display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px;
+    }
+    .mode-select__btn {
+      padding: 16px 28px; border-radius: 2px;
+      font-size: 0.7rem; font-weight: 600;
+      box-shadow: 4px 4px 0 #000;
+      transition: transform 0.05s, box-shadow 0.05s;
+      border: 2px solid transparent;
+    }
+    .mode-select__btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+    .mode-select__btn--ai { background: var(--accent-green); color: #fff; }
+    .mode-select__btn--online { background: var(--accent-orange); color: #fff; }
+    .mode-select__btn--back { background: var(--panel-border); color: var(--text-primary); font-size: 0.55rem; padding: 10px 20px; }
+
+    /* ---- Lobby ---- */
+    .lobby { display: none; }
+    .lobby--visible { display: block; }
+    .lobby__section {
+      background: var(--panel-bg); border: 2px solid var(--panel-border);
+      border-radius: 2px; padding: 16px; margin-bottom: 14px;
+      box-shadow: 4px 4px 0 #000;
+    }
+    .lobby__label {
+      font-size: 0.5rem; color: var(--text-gold); margin-bottom: 10px;
+    }
+    .lobby__room-code {
+      font-size: 1.4rem; color: var(--text-gold); letter-spacing: 0.3em;
+      text-shadow: 0 0 8px rgba(255,200,0,0.6);
+      margin: 10px 0;
+    }
+    .lobby__input {
+      font-family: var(--font-main); font-size: 0.8rem;
+      background: #0a0a1a; color: var(--text-gold); border: 2px solid var(--panel-border);
+      border-radius: 2px; padding: 10px 14px; text-align: center;
+      letter-spacing: 0.3em; text-transform: uppercase; width: 100%;
+      margin-bottom: 10px;
+    }
+    .lobby__input::placeholder { color: var(--text-secondary); letter-spacing: 0.1em; font-size: 0.5rem; }
+    .lobby__status {
+      font-size: 0.45rem; color: var(--text-secondary); margin-top: 8px;
+    }
+    .lobby__status--error { color: var(--accent-red); }
+    .lobby__status--ok { color: var(--accent-green); }
+    .lobby__or {
+      font-size: 0.45rem; color: var(--text-secondary); text-align: center;
+      margin-bottom: 14px;
+    }
+
+    /* ---- Connection Status ---- */
+    .conn-status {
+      display: none; font-size: 0.4rem; text-align: center;
+      padding: 4px 8px; border-radius: 2px;
+    }
+    .conn-status--visible { display: block; }
+    .conn-status--connected { background: #0a2a0a; color: var(--accent-green); border: 1px solid var(--accent-green); }
+    .conn-status--waiting { background: #2a1a00; color: var(--accent-orange); border: 1px solid var(--accent-orange); }
+    .conn-status--disconnected { background: #2a0a0a; color: var(--accent-red); border: 1px solid var(--accent-red); }
+
     /* ---- Reset ---- */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 16px; }
@@ -403,9 +480,38 @@
   </style>
 </head>
 <body>
+  <!-- Mode Selection Screen -->
+  <div class="mode-select" id="modeSelect">
+    <div class="mode-select__panel">
+      <div class="mode-select__title">Ball Crap</div>
+      <div class="mode-select__subtitle">Football meets Craps</div>
+      <div class="mode-select__buttons" id="modeButtons">
+        <button class="mode-select__btn mode-select__btn--ai" onclick="selectMode('ai')">Play vs AI</button>
+        <button class="mode-select__btn mode-select__btn--online" onclick="selectMode('online')">Play Online</button>
+      </div>
+      <div class="lobby" id="lobby">
+        <div class="lobby__section">
+          <div class="lobby__label">Create Room</div>
+          <button class="mode-select__btn mode-select__btn--online" style="width:100%" onclick="createRoom()">Create</button>
+          <div class="lobby__room-code" id="roomCode"></div>
+          <div class="lobby__status" id="createStatus"></div>
+        </div>
+        <div class="lobby__or">— or —</div>
+        <div class="lobby__section">
+          <div class="lobby__label">Join Room</div>
+          <input class="lobby__input" id="joinInput" type="text" maxlength="4" placeholder="Enter code" autocomplete="off">
+          <button class="mode-select__btn mode-select__btn--online" style="width:100%" onclick="joinRoom()">Join</button>
+          <div class="lobby__status" id="joinStatus"></div>
+        </div>
+        <button class="mode-select__btn mode-select__btn--back" onclick="lobbyBack()">Back</button>
+      </div>
+    </div>
+  </div>
+
   <button class="restart-btn" onclick="restartGame()">Restart</button>
   <div class="copyright">© 2025 Erick Delgado Rodriguez</div>
   <div id="app">
+    <div class="conn-status" id="connStatus"></div>
     <div class="scoreboard">
       <div class="scoreboard__team">
         <div class="scoreboard__label">You</div>
@@ -503,6 +609,183 @@ function el(tag, cls, txt) {
   if (cls) cls.split(' ').forEach(c => { if (c) e.classList.add(c); });
   if (txt) e.textContent = txt;
   return e;
+}
+
+// ============================================================
+// MODE SELECTION & NETWORKING
+// ============================================================
+let gameMode = 'ai'; // 'ai' or 'online'
+let playerRole = null; // 'host' or 'guest' (online only)
+let roomCode = null;
+let ws = null; // WebSocket connection
+let wsMessageQueue = []; // incoming messages waiting to be consumed
+let wsMessageResolve = null; // resolver for waitForNetMessage()
+
+const RELAY_URL = ''; // Set after deploying relay server (e.g. wss://ball-crap-relay.onrender.com)
+
+function generateRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to avoid confusion
+  let code = '';
+  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+// --- Mode Selection UI ---
+function selectMode(mode) {
+  if (mode === 'ai') {
+    gameMode = 'ai';
+    hideModeSelect();
+    startGame();
+  } else {
+    // Show lobby
+    $('#modeButtons').style.display = 'none';
+    $('#lobby').classList.add('lobby--visible');
+  }
+}
+
+function lobbyBack() {
+  $('#lobby').classList.remove('lobby--visible');
+  $('#modeButtons').style.display = 'flex';
+  $('#roomCode').textContent = '';
+  $('#createStatus').textContent = '';
+  $('#joinStatus').textContent = '';
+  $('#joinInput').value = '';
+  netDisconnect();
+}
+
+function hideModeSelect() {
+  $('#modeSelect').classList.add('mode-select--hidden');
+}
+
+function showModeSelect() {
+  $('#modeSelect').classList.remove('mode-select--hidden');
+  $('#lobby').classList.remove('lobby--visible');
+  $('#modeButtons').style.display = 'flex';
+  $('#roomCode').textContent = '';
+  $('#createStatus').textContent = '';
+  $('#joinStatus').textContent = '';
+  $('#joinInput').value = '';
+}
+
+function createRoom() {
+  if (!RELAY_URL) {
+    $('#createStatus').textContent = 'Relay server not configured yet';
+    $('#createStatus').className = 'lobby__status lobby__status--error';
+    return;
+  }
+  roomCode = generateRoomCode();
+  playerRole = 'host';
+  $('#roomCode').textContent = roomCode;
+  $('#createStatus').textContent = 'Connecting...';
+  $('#createStatus').className = 'lobby__status';
+  netConnect(roomCode, 'host');
+}
+
+function joinRoom() {
+  const code = $('#joinInput').value.trim().toUpperCase();
+  if (code.length !== 4) {
+    $('#joinStatus').textContent = 'Enter a 4-letter code';
+    $('#joinStatus').className = 'lobby__status lobby__status--error';
+    return;
+  }
+  if (!RELAY_URL) {
+    $('#joinStatus').textContent = 'Relay server not configured yet';
+    $('#joinStatus').className = 'lobby__status lobby__status--error';
+    return;
+  }
+  roomCode = code;
+  playerRole = 'guest';
+  $('#joinStatus').textContent = 'Connecting...';
+  $('#joinStatus').className = 'lobby__status';
+  netConnect(roomCode, 'guest');
+}
+
+// --- WebSocket Networking ---
+function netConnect(room, role) {
+  if (ws) ws.close();
+  wsMessageQueue = [];
+  wsMessageResolve = null;
+
+  const url = `${RELAY_URL}?room=${room}&role=${role}`;
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    const statusEl = role === 'host' ? '#createStatus' : '#joinStatus';
+    $(statusEl).textContent = 'Connected — waiting for opponent...';
+    $(statusEl).className = 'lobby__status lobby__status--ok';
+    setConnStatus('waiting', 'Waiting for opponent...');
+  };
+
+  ws.onmessage = (evt) => {
+    let msg;
+    try { msg = JSON.parse(evt.data); } catch { return; }
+
+    if (msg.type === 'OPPONENT_JOINED') {
+      setConnStatus('connected', 'Opponent connected');
+      gameMode = 'online';
+      hideModeSelect();
+      startGame();
+      return;
+    }
+
+    if (msg.type === 'OPPONENT_LEFT') {
+      setConnStatus('disconnected', 'Opponent disconnected');
+      return;
+    }
+
+    // Queue game messages for consumption by waitForNetMessage
+    if (wsMessageResolve) {
+      const resolve = wsMessageResolve;
+      wsMessageResolve = null;
+      resolve(msg);
+    } else {
+      wsMessageQueue.push(msg);
+    }
+  };
+
+  ws.onclose = () => {
+    if (gameMode === 'online') {
+      setConnStatus('disconnected', 'Connection lost');
+    }
+  };
+
+  ws.onerror = () => {
+    const statusEl = role === 'host' ? '#createStatus' : '#joinStatus';
+    $(statusEl).textContent = 'Connection failed';
+    $(statusEl).className = 'lobby__status lobby__status--error';
+  };
+}
+
+function netSend(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+  }
+}
+
+function waitForNetMessage() {
+  return new Promise(resolve => {
+    if (wsMessageQueue.length > 0) {
+      resolve(wsMessageQueue.shift());
+    } else {
+      wsMessageResolve = resolve;
+    }
+  });
+}
+
+function netDisconnect() {
+  if (ws) { ws.close(); ws = null; }
+  wsMessageQueue = [];
+  wsMessageResolve = null;
+  setConnStatus('hidden');
+}
+
+// --- Connection Status Indicator ---
+function setConnStatus(status, text) {
+  const el = $('#connStatus');
+  el.className = 'conn-status';
+  if (status === 'hidden') return;
+  el.classList.add('conn-status--visible', `conn-status--${status}`);
+  el.textContent = text || '';
 }
 
 // ============================================================
@@ -1914,9 +2197,13 @@ function restartGame() {
   gameId++;
   // Clear overlay
   $('.message-overlay').classList.remove('message-overlay--visible');
+  netDisconnect();
   setTimeout(() => {
     gameAborted = false;
-    startGame();
+    gameMode = 'ai';
+    playerRole = null;
+    roomCode = null;
+    showModeSelect();
   }, 50);
 }
 
@@ -2384,6 +2671,10 @@ async function startGame() {
   const myId = gameId;
   state = createState();
   state.deck = shuffleDeck(createDeck());
+  // Update labels for game mode
+  const oppLabel = gameMode === 'online' ? 'Opponent' : 'AI';
+  $$('.scoreboard__label')[1].textContent = oppLabel;
+  $('.wallet--ai .wallet__label').textContent = oppLabel + ' Credits';
   renderScoreboard(state);
   renderGameInfo(state);
   hideResult(); hideDiceArea(); hideBettingPanel();
@@ -2468,7 +2759,8 @@ async function startGame() {
 
 document.addEventListener('DOMContentLoaded', () => {
   window.DEBUG_STATE = () => state;
-  startGame();
+  // Show mode selection screen instead of auto-starting
+  showModeSelect();
 });
 </script>
 </body>
