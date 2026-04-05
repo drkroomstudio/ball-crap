@@ -250,6 +250,12 @@
     .restart-btn:hover { background: var(--accent-red); color: #fff; }
     .restart-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
 
+    .copyright {
+      position: fixed; bottom: 8px; right: 10px; z-index: 50;
+      font-family: var(--font-main); font-size: 0.35rem;
+      color: #444466; pointer-events: none; user-select: none;
+    }
+
     /* ---- Message Overlay ---- */
     .message-overlay {
       position: fixed; inset: 0; display: flex;
@@ -398,6 +404,7 @@
 </head>
 <body>
   <button class="restart-btn" onclick="restartGame()">Restart</button>
+  <div class="copyright">© 2025 Erick Delgado Rodriguez</div>
   <div id="app">
     <div class="scoreboard">
       <div class="scoreboard__team">
