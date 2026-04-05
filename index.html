@@ -304,6 +304,14 @@
     }
     .config-bar__set-btn:hover { background: #2e8b57; }
     .config-bar__set-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+    .config-bar--attention {
+      animation: pulse-config 1s ease-in-out infinite;
+    }
+    @keyframes pulse-config {
+      0%, 100% { border-color: var(--accent-orange); box-shadow: 4px 4px 0 #000, 0 0 12px rgba(255,136,0,0.5); }
+      50% { border-color: var(--panel-border); box-shadow: 4px 4px 0 #000, 0 0 0 rgba(255,136,0,0); }
+    }
+    .config-bar--locked { animation: none; }
     .config-bar--locked .config-input { opacity: 0.5; pointer-events: none; }
     .config-bar--locked .config-bar__set-btn { background: var(--accent-orange); }
 
@@ -645,6 +653,7 @@ function applyConfig() {
   state.pot = state.buyIn * 2;
   renderWallets(state);
   // Lock the inputs
+  $('.config-bar').classList.remove('config-bar--attention');
   $('.config-bar').classList.add('config-bar--locked');
   $('.config-bar__set-btn').textContent = 'Locked';
   if (configResolve) { configResolve(); configResolve = null; }
@@ -658,6 +667,7 @@ function waitForConfig() {
 
 function unlockConfig() {
   $('.config-bar').classList.remove('config-bar--locked');
+  $('.config-bar').classList.add('config-bar--attention');
   $('.config-bar__set-btn').textContent = 'Set';
 }
 
