@@ -621,7 +621,7 @@ let ws = null; // WebSocket connection
 let wsMessageQueue = []; // incoming messages waiting to be consumed
 let wsMessageResolve = null; // resolver for waitForNetMessage()
 
-const RELAY_URL = ''; // Set after deploying relay server (e.g. wss://ball-crap-relay.onrender.com)
+const RELAY_URL = 'wss://ball-crap.onrender.com';
 
 function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to avoid confusion
