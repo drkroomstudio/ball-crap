@@ -1291,7 +1291,7 @@ function waitForDefenseBet(state) {
         const amountEl = el('div','bet-controls__amount','$' + bets[pos]);
         const plusBtn = el('button','bet-controls__btn','+');
 
-        const step = Math.max(1, Math.floor(state.buyIn / 2));
+        const step = Math.max(1, Math.floor(state.buyIn / 5));
         minusBtn.addEventListener('click', () => {
           bets[pos] = Math.max(0, bets[pos] - step);
           renderBetUI();
@@ -1420,7 +1420,7 @@ function waitForOffenseResponse(state) {
         if (responses[pos] === 'raise') {
           const raiseRow = el('div','bet-controls');
           raiseRow.style.cssText = 'width:100%;justify-content:center;margin-top:4px;';
-          const step = Math.max(1, Math.floor(state.buyIn / 2));
+          const step = Math.max(1, Math.floor(state.buyIn / 5));
           const minusBtn = el('button','bet-controls__btn','-');
           const amtEl = el('div','bet-controls__amount','$' + raises[pos]);
           const plusBtn = el('button','bet-controls__btn','+');
@@ -1559,7 +1559,7 @@ function waitForOffenseInitiateBet(state, unbetPositions) {
         row.appendChild(cardArea);
 
         const controls = el('div','bet-controls');
-        const step = Math.max(1, Math.floor(state.buyIn / 2));
+        const step = Math.max(1, Math.floor(state.buyIn / 5));
         const minusBtn = el('button','bet-controls__btn','-');
         const amountEl = el('div','bet-controls__amount','$' + bets[pos]);
         const plusBtn = el('button','bet-controls__btn','+');
@@ -1677,7 +1677,7 @@ function waitForDefenseRespondToOffBet(state) {
         if (responses[pos] === 'raise') {
           const raiseRow = el('div','bet-controls');
           raiseRow.style.cssText = 'width:100%;justify-content:center;margin-top:4px;';
-          const step = Math.max(1, Math.floor(state.buyIn / 2));
+          const step = Math.max(1, Math.floor(state.buyIn / 5));
           const minusBtn = el('button','bet-controls__btn','-');
           const amtEl = el('div','bet-controls__amount','$' + raises[pos]);
           const plusBtn = el('button','bet-controls__btn','+');
