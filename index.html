@@ -108,6 +108,20 @@
       font-size: 0.45rem; color: var(--text-secondary); text-align: center;
       margin-bottom: 14px;
     }
+    .lobby__config-row {
+      display: flex; gap: 10px; margin-bottom: 10px;
+    }
+    .lobby__config-label {
+      font-size: 0.4rem; color: var(--text-secondary); flex: 1;
+    }
+    .lobby__config-input {
+      font-family: var(--font-main); font-size: 0.6rem;
+      background: #0a0a1a; color: var(--text-gold); border: 2px solid var(--panel-border);
+      border-radius: 2px; padding: 6px 8px; width: 100%; margin-top: 4px;
+      display: block;
+    }
+    .lobby__config-locked .lobby__config-input { opacity: 0.5; pointer-events: none; }
+    .lobby__config-locked #lobbySetBtn { opacity: 0.5; pointer-events: none; }
 
     /* ---- Connection Status ---- */
     .conn-status {
@@ -396,7 +410,7 @@
     }
     .config-bar--locked { animation: none; }
     .config-bar--locked .config-input { opacity: 0.5; pointer-events: none; }
-    .config-bar--locked .config-bar__set-btn { background: var(--accent-orange); }
+    .config-bar--locked .config-bar__set-btn { background: var(--accent-orange); pointer-events: none; opacity: 0.5; }
 
     /* ---- Wallet Bar ---- */
     .wallet-bar {
@@ -487,17 +501,27 @@
       <div class="mode-select__subtitle">Football meets Craps</div>
       <div class="mode-select__buttons" id="modeButtons">
         <button class="mode-select__btn mode-select__btn--ai" onclick="selectMode('ai')">Play vs AI</button>
-        <button class="mode-select__btn mode-select__btn--online" onclick="selectMode('online')">Play Online</button>
+        <button class="mode-select__btn mode-select__btn--online" onclick="selectMode('online')">Create Game</button>
+        <button class="mode-select__btn mode-select__btn--online" onclick="selectJoin()">Join Game</button>
       </div>
       <div class="lobby" id="lobby">
-        <div class="lobby__section">
+        <div class="lobby__section" id="lobbyConfig">
+          <div class="lobby__label">Set Bets</div>
+          <div class="lobby__config-row">
+            <label class="lobby__config-label">Buy-in: <input type="number" class="lobby__config-input" id="lobbyBuyIn" value="10" min="5"></label>
+            <label class="lobby__config-label">Balance: <input type="number" class="lobby__config-input" id="lobbyBalance" value="100" min="10"></label>
+          </div>
+          <button class="mode-select__btn mode-select__btn--online" style="width:100%" id="lobbySetBtn" onclick="lobbySetConfig()">Set Bets</button>
+          <div class="lobby__status" id="lobbyConfigStatus"></div>
+        </div>
+        <div class="lobby__section" id="lobbyCreate" style="display:none">
           <div class="lobby__label">Create Room</div>
           <button class="mode-select__btn mode-select__btn--online" style="width:100%" onclick="createRoom()">Create</button>
           <div class="lobby__room-code" id="roomCode"></div>
           <div class="lobby__status" id="createStatus"></div>
         </div>
-        <div class="lobby__or">— or —</div>
-        <div class="lobby__section">
+        <div class="lobby__or" id="lobbyOr" style="display:none">— or —</div>
+        <div class="lobby__section" id="lobbyJoin" style="display:none">
           <div class="lobby__label">Join Room</div>
           <input class="lobby__input" id="joinInput" type="text" maxlength="4" placeholder="Enter code" autocomplete="off">
           <button class="mode-select__btn mode-select__btn--online" style="width:100%" onclick="joinRoom()">Join</button>
@@ -617,6 +641,7 @@ function el(tag, cls, txt) {
 let gameMode = 'ai'; // 'ai' or 'online'
 let playerRole = null; // 'host' or 'guest' (online only)
 let roomCode = null;
+let onlineConfig = null; // { buyIn, startingBalance } set in lobby before room creation
 let ws = null; // WebSocket connection
 let wsMessageQueue = []; // incoming messages waiting to be consumed
 let wsMessageResolve = null; // resolver for waitForNetMessage()
@@ -637,10 +662,52 @@ function selectMode(mode) {
     hideModeSelect();
     startGame();
   } else {
-    // Show lobby
+    // Host flow — set bets first, then create room
     $('#modeButtons').style.display = 'none';
     $('#lobby').classList.add('lobby--visible');
+    $('#lobbyConfig').style.display = '';
+    $('#lobbyJoin').style.display = 'none';
+    $('#lobbyOr').style.display = 'none';
   }
+}
+
+function selectJoin() {
+  // Guest flow — just show join input
+  $('#modeButtons').style.display = 'none';
+  $('#lobby').classList.add('lobby--visible');
+  $('#lobbyConfig').style.display = 'none';
+  $('#lobbyCreate').style.display = 'none';
+  $('#lobbyOr').style.display = 'none';
+  $('#lobbyJoin').style.display = '';
+}
+
+function lobbySetConfig() {
+  let buyIn = parseInt($('#lobbyBuyIn').value) || 10;
+  let bal = parseInt($('#lobbyBalance').value) || 100;
+  if (buyIn < 5) buyIn = 5;
+  if (bal < buyIn * 2) bal = buyIn * 2;
+  $('#lobbyBuyIn').value = buyIn;
+  $('#lobbyBalance').value = bal;
+  onlineConfig = { buyIn, startingBalance: bal };
+  // Lock config, show Create Room
+  $('#lobbyConfig').classList.add('lobby__config-locked');
+  $('#lobbySetBtn').textContent = 'Locked';
+  $('#lobbyConfigStatus').textContent = `Buy-in: $${buyIn} | Balance: $${bal}`;
+  $('#lobbyConfigStatus').className = 'lobby__status lobby__status--ok';
+  $('#lobbyCreate').style.display = '';
+}
+
+function lobbyResetConfig() {
+  onlineConfig = null;
+  $('#lobbyConfig').style.display = '';
+  $('#lobbyConfig').classList.remove('lobby__config-locked');
+  $('#lobbySetBtn').textContent = 'Set Bets';
+  $('#lobbyConfigStatus').textContent = '';
+  $('#lobbyBuyIn').value = 10;
+  $('#lobbyBalance').value = 100;
+  $('#lobbyCreate').style.display = 'none';
+  $('#lobbyOr').style.display = 'none';
+  $('#lobbyJoin').style.display = 'none';
 }
 
 function lobbyBack() {
@@ -650,6 +717,7 @@ function lobbyBack() {
   $('#createStatus').textContent = '';
   $('#joinStatus').textContent = '';
   $('#joinInput').value = '';
+  lobbyResetConfig();
   netDisconnect();
 }
 
@@ -665,6 +733,7 @@ function showModeSelect() {
   $('#createStatus').textContent = '';
   $('#joinStatus').textContent = '';
   $('#joinInput').value = '';
+  lobbyResetConfig();
 }
 
 function createRoom() {
@@ -723,8 +792,18 @@ function netConnect(room, role) {
     if (msg.type === 'OPPONENT_JOINED') {
       setConnStatus('connected', 'Opponent connected');
       gameMode = 'online';
+      // Host sends config to guest before starting
+      if (playerRole === 'host' && onlineConfig) {
+        netSend({ type: 'CONFIG', data: onlineConfig });
+      }
       hideModeSelect();
       startGame();
+      return;
+    }
+
+    // Guest receives config before game starts
+    if (msg.type === 'CONFIG') {
+      onlineConfig = msg.data;
       return;
     }
 
@@ -786,6 +865,25 @@ function setConnStatus(status, text) {
   if (status === 'hidden') return;
   el.classList.add('conn-status--visible', `conn-status--${status}`);
   el.textContent = text || '';
+}
+
+// --- Online Game Helpers ---
+// Sides are ALWAYS 'player'/'ai' in all modes. In online mode:
+//   host = 'player' (first offense), guest = 'ai' (first defense)
+// Only isLocalSide() needs to know the host/guest mapping.
+function isOnline() { return gameMode === 'online'; }
+
+// Is the local player acting as this side?
+function isLocalSide(side) {
+  if (!isOnline()) return side === 'player';
+  // host maps to 'player', guest maps to 'ai'
+  return (playerRole === 'host') ? side === 'player' : side === 'ai';
+}
+
+// Display label for a side
+function sideLabel(side) {
+  if (!isOnline()) return side === 'player' ? 'You' : 'AI';
+  return isLocalSide(side) ? 'You' : 'Opponent';
 }
 
 // ============================================================
@@ -924,6 +1022,7 @@ let configResolve = null;
 
 function applyConfig() {
   if (!state) return;
+  if (isOnline() && playerRole === 'guest') return;
   readConfigToState(state);
   // First game: use startingBalance. Subsequent games: carry over wallets.
   if (persistentWallets === null) {
@@ -1874,7 +1973,7 @@ function renderGameInfo(state) {
   const downText = isGoal
     ? `${ordinal(d.downNumber)} & Goal`
     : `${ordinal(d.downNumber)} & ${yardsLeft}`;
-  const driveLabel = d.offenseSide==='player' ? 'Your Offense' : 'AI Offense';
+  const driveLabel = isLocalSide(d.offenseSide) ? 'Your Offense' : `${sideLabel(d.offenseSide)} Offense`;
   $('.game-info__drive .game-info__value').textContent = driveLabel;
   $('.game-info__down .game-info__value').textContent = downText;
   $('.game-info__yard .game-info__value').textContent = `${d.yardLine} yd`;
@@ -1900,7 +1999,7 @@ function renderSlotCard(sel, card, showFace, label) {
 function renderField(state) {
   const oP = state.down.offensePlacements, dP = state.down.defensePlacements;
   const revealed = ['REVEAL','DICE_ROLL','RESOLVE_DOWN','SHOW_BET_RESULTS'].includes(state.phase);
-  const pIsOff = state.drive.offenseSide==='player';
+  const pIsOff = isLocalSide(state.drive.offenseSide);
 
   renderSlotCard('.field__slot--cb1', dP.cb1, revealed || !pIsOff, 'CB');
   renderSlotCard('.field__slot--db', dP.db, revealed || !pIsOff, 'DB');
@@ -2049,7 +2148,7 @@ function renderHand(cards, state) {
   hc.innerHTML = '';
   selectedIdx = null;
   const placing = state.phase==='OFFENSE_PLACE_CARDS'||state.phase==='DEFENSE_PLACE_CARDS';
-  const pIsOff = state.drive.offenseSide==='player';
+  const pIsOff = isLocalSide(state.drive.offenseSide);
   cards.forEach((card,i) => {
     const ce = createCardEl(card, false);
     if (placing) {
@@ -2066,7 +2165,7 @@ function renderHand(cards, state) {
 
 function highlightSlots(state) {
   clearSlotHL();
-  const pIsOff = state.drive.offenseSide==='player';
+  const pIsOff = isLocalSide(state.drive.offenseSide);
   const pl = pIsOff ? state.down.offensePlacements : state.down.defensePlacements;
   const pos = pIsOff ? ['wr1','rb','wr2'] : ['cb1','db','cb2'];
   pos.forEach(p => { if (!pl[p]) { const s=$(`.field__slot--${p} .card-slot`); if(s) s.classList.add('card-slot--highlight'); }});
@@ -2076,7 +2175,7 @@ function clearSlotHL() { $$('.card-slot--highlight').forEach(e=>e.classList.remo
 
 function waitForPlacement(state, handCards) {
   return new Promise(resolve => {
-    const pIsOff = state.drive.offenseSide==='player';
+    const pIsOff = isLocalSide(state.drive.offenseSide);
     const pl = pIsOff ? state.down.offensePlacements : state.down.defensePlacements;
     const pos = pIsOff ? ['wr1','rb','wr2'] : ['cb1','db','cb2'];
 
@@ -2203,6 +2302,8 @@ function restartGame() {
     gameMode = 'ai';
     playerRole = null;
     roomCode = null;
+    onlineConfig = null;
+    $('.config-bar').style.display = '';
     showModeSelect();
   }, 50);
 }
@@ -2243,11 +2344,69 @@ function ensureDeck(s, n) {
 }
 
 async function executeDown(state, offCards, defCards, myId) {
-  const pIsOff = state.drive.offenseSide==='player';
+  const offSideDrive = state.drive.offenseSide;
+  const pIsOff = isLocalSide(offSideDrive);
   hideResult(); hideDiceArea(); renderGameInfo(state);
 
-  if (pIsOff) {
-    // Player picks 3 from their full offensive hand
+  if (isOnline()) {
+    // === ONLINE MODE ===
+    if (pIsOff) {
+      // Local player is offense
+      state.phase='OFFENSE_PLACE_CARDS';
+      setInstruction(`Place 3 of your ${offCards.length} cards on the field (tap card, then tap position)`);
+      state.down.offensePlacements={wr1:null,rb:null,wr2:null};
+      renderField(state);
+      renderHand(offCards, state);
+      await waitForPlacement(state, offCards);
+      checkAbort(myId);
+
+      state.phase='PLACE_ROCK';
+      setInstruction('Place the rock: tap RB (Run) or a WR (Pass)');
+      await waitForRock(state);
+      checkAbort(myId);
+
+      // Send placement + rock to opponent (card values hidden until reveal)
+      netSend({ type: 'OFFENSE_DONE', data: {
+        placements: { wr1: state.down.offensePlacements.wr1, rb: state.down.offensePlacements.rb, wr2: state.down.offensePlacements.wr2 },
+        rock: state.down.rockPosition
+      }});
+
+      // Wait for opponent defense placement
+      state.phase='DEFENSE_PLACE_CARDS';
+      setInstruction('Waiting for opponent to place defense...');
+      renderHand([], state);
+      const defMsg = await waitForNetMessage();
+      checkAbort(myId);
+      state.down.defensePlacements = defMsg.data.placements;
+    } else {
+      // Local player is defense — wait for opponent offense + rock
+      state.phase='OFFENSE_PLACE_CARDS';
+      setInstruction('Waiting for opponent to place offense...');
+      state.down.offensePlacements={wr1:null,rb:null,wr2:null};
+      renderField(state);
+      renderHand([], state);
+      const offMsg = await waitForNetMessage();
+      checkAbort(myId);
+      state.down.offensePlacements = offMsg.data.placements;
+      state.down.rockPosition = offMsg.data.rock;
+      renderField(state);
+
+      // Local player places defense
+      state.phase='DEFENSE_PLACE_CARDS';
+      setInstruction(`Place 3 of your ${defCards.length} cards on defense (tap card, then tap position)`);
+      state.down.defensePlacements={cb1:null,db:null,cb2:null};
+      renderField(state);
+      renderHand(defCards, state);
+      await waitForPlacement(state, defCards);
+      checkAbort(myId);
+
+      // Send defense placement to opponent
+      netSend({ type: 'DEFENSE_DONE', data: {
+        placements: { cb1: state.down.defensePlacements.cb1, db: state.down.defensePlacements.db, cb2: state.down.defensePlacements.cb2 }
+      }});
+    }
+  } else if (pIsOff) {
+    // === AI MODE: Player on offense ===
     state.phase='OFFENSE_PLACE_CARDS';
     setInstruction(`Place 3 of your ${offCards.length} cards on the field (tap card, then tap position)`);
     state.down.offensePlacements={wr1:null,rb:null,wr2:null};
@@ -2261,7 +2420,6 @@ async function executeDown(state, offCards, defCards, myId) {
     await waitForRock(state);
     checkAbort(myId);
 
-    // AI picks best 3 from its full defensive hand (removes them internally)
     state.phase='DEFENSE_PLACE_CARDS';
     setInstruction('Defense is setting up...');
     renderHand([], state);
@@ -2269,7 +2427,7 @@ async function executeDown(state, offCards, defCards, myId) {
     checkAbort(myId);
     state.down.defensePlacements = aiPlaceDefense(defCards);
   } else {
-    // AI picks best 3 from its full offensive hand (removes them internally)
+    // === AI MODE: AI on offense ===
     state.phase='OFFENSE_PLACE_CARDS';
     setInstruction('AI is setting up their offense...');
     state.down.offensePlacements={wr1:null,rb:null,wr2:null};
@@ -2281,7 +2439,6 @@ async function executeDown(state, offCards, defCards, myId) {
     state.down.rockPosition = aiOff.rockPosition;
     renderField(state);
 
-    // Player picks 3 from their full defensive hand
     state.phase='DEFENSE_PLACE_CARDS';
     setInstruction(`Place 3 of your ${defCards.length} cards on defense (tap card, then tap position)`);
     state.down.defensePlacements={cb1:null,db:null,cb2:null};
@@ -2300,10 +2457,14 @@ async function executeDown(state, offCards, defCards, myId) {
   const canBet = state.wallets[offSide] > 0 || state.wallets[defSide] > 0;
 
   if (canBet) {
+    const localIsDef = isLocalSide(defSide);
+    const localIsOff = isLocalSide(offSide);
+    const oppLabel = isOnline() ? 'Opponent' : 'AI';
+
     // ---- ROUND 1: Defense bets first ----
     state.phase = 'DEFENSE_BET';
     renderField(state);
-    if (defSide === 'ai') {
+    if (defSide === 'ai' && !isOnline()) {
       setInstruction('AI defense is placing side bets...');
       await sleep(600);
       checkAbort(myId);
@@ -2314,23 +2475,37 @@ async function executeDown(state, offCards, defCards, myId) {
         await showMessage('AI Side Bets', `Defense bets: ${betSummary}`, 'Respond');
         checkAbort(myId);
       }
-    } else {
+    } else if (localIsDef) {
       setInstruction('Place your defense side bets on the non-rock cards');
       renderHand([], state);
       await waitForDefenseBet(state);
       checkAbort(myId);
       renderField(state);
+      if (isOnline()) netSend({ type: 'DEFENSE_BETS', data: state.bets.defenseBets });
+    } else {
+      // Remote player is defense — wait for their bets
+      setInstruction(`Waiting for ${oppLabel} to place defense bets...`);
+      renderHand([], state);
+      const msg = await waitForNetMessage();
+      checkAbort(myId);
+      state.bets.defenseBets = msg.data;
+      renderField(state);
+      const betSummary = nonRockPos.map(p => `${posLabel(p)}: $${state.bets.defenseBets[p]}`).join(', ');
+      if (nonRockPos.some(p => state.bets.defenseBets[p] > 0)) {
+        await showMessage(`${oppLabel} Side Bets`, `Defense bets: ${betSummary}`, 'Respond');
+        checkAbort(myId);
+      }
     }
 
     // Positions where defense bet vs didn't
     const defBetPositions = nonRockPos.filter(p => (state.bets.defenseBets[p] || 0) > 0);
     const unbetPositions = nonRockPos.filter(p => (state.bets.defenseBets[p] || 0) === 0);
 
-    // ---- ROUND 1b: Offense responds to defense bets (only on positions defense bet on) ----
+    // ---- ROUND 1b: Offense responds to defense bets ----
     nonRockPos.forEach(p => { state.bets.offenseResponses[p] = 'pass'; state.bets.raiseAmounts[p] = 0; });
     if (defBetPositions.length > 0) {
       state.phase = 'OFFENSE_RESPOND';
-      if (offSide === 'ai') {
+      if (offSide === 'ai' && !isOnline()) {
         const aiResp = aiBetAsOffenseResponse(state);
         state.bets.offenseResponses = aiResp.responses;
         state.bets.raiseAmounts = aiResp.raises;
@@ -2345,19 +2520,34 @@ async function executeDown(state, offCards, defCards, myId) {
           checkAbort(myId);
         }
         renderField(state);
-      } else {
+      } else if (localIsOff) {
         setInstruction('Respond to defense side bets');
         renderHand([], state);
         await waitForOffenseResponse(state);
         checkAbort(myId);
         renderField(state);
+        if (isOnline()) netSend({ type: 'OFFENSE_RESPONSES', data: { responses: state.bets.offenseResponses, raises: state.bets.raiseAmounts } });
+      } else {
+        setInstruction(`Waiting for ${oppLabel} to respond...`);
+        const msg = await waitForNetMessage();
+        checkAbort(myId);
+        state.bets.offenseResponses = msg.data.responses;
+        state.bets.raiseAmounts = msg.data.raises;
+        renderField(state);
+        const anyAction = defBetPositions.some(p => msg.data.responses[p] !== 'pass');
+        if (anyAction) {
+          const respSummary = defBetPositions
+            .map(p => `${posLabel(p)}: ${msg.data.responses[p]}${msg.data.responses[p]==='raise'?' $'+msg.data.raises[p]:''}`).join(', ');
+          await showMessage(`${oppLabel} Response`, respSummary, 'Continue');
+          checkAbort(myId);
+        }
       }
 
       // Defense matches raises if any
       const hasRaises = defBetPositions.some(p => state.bets.offenseResponses[p] === 'raise');
       if (hasRaises) {
         state.phase = 'DEFENSE_MATCH';
-        if (defSide === 'ai') {
+        if (defSide === 'ai' && !isOnline()) {
           state.bets.defenseMatched = aiBetDefenseMatch(state);
           const matchSummary = defBetPositions.filter(p => state.bets.offenseResponses[p]==='raise')
             .map(p => `${posLabel(p)}: ${state.bets.defenseMatched[p]?'matched':'passed'}`).join(', ');
@@ -2366,10 +2556,20 @@ async function executeDown(state, offCards, defCards, myId) {
           checkAbort(myId);
           await showMessage('AI Match Decision', matchSummary, 'Continue');
           checkAbort(myId);
-        } else {
+        } else if (localIsDef) {
           setInstruction('Offense raised! Match or pass?');
           renderHand([], state);
           await waitForDefenseMatch(state);
+          checkAbort(myId);
+          if (isOnline()) netSend({ type: 'DEFENSE_MATCHED', data: state.bets.defenseMatched });
+        } else {
+          setInstruction(`Waiting for ${oppLabel} to decide on raises...`);
+          const msg = await waitForNetMessage();
+          checkAbort(myId);
+          state.bets.defenseMatched = msg.data;
+          const matchSummary = defBetPositions.filter(p => state.bets.offenseResponses[p]==='raise')
+            .map(p => `${posLabel(p)}: ${msg.data[p]?'matched':'passed'}`).join(', ');
+          await showMessage(`${oppLabel} Match Decision`, matchSummary, 'Continue');
           checkAbort(myId);
         }
       }
@@ -2378,7 +2578,7 @@ async function executeDown(state, offCards, defCards, myId) {
     // ---- ROUND 2: Offense initiates bets on positions defense passed on ----
     if (unbetPositions.length > 0 && state.wallets[offSide] > 0) {
       state.phase = 'OFFENSE_BET';
-      if (offSide === 'ai') {
+      if (offSide === 'ai' && !isOnline()) {
         state.bets.offenseBets = aiBetAsOffenseInitiate(state, unbetPositions);
         renderField(state);
         const anyOffBets = unbetPositions.some(p => (state.bets.offenseBets[p] || 0) > 0);
@@ -2390,19 +2590,32 @@ async function executeDown(state, offCards, defCards, myId) {
           await showMessage('AI Offense Bets', `Offense bets: ${betSummary}`, 'Respond');
           checkAbort(myId);
         }
-      } else {
+      } else if (localIsOff) {
         setInstruction('Defense passed — place your offense bets');
         renderHand([], state);
         await waitForOffenseInitiateBet(state, unbetPositions);
         checkAbort(myId);
         renderField(state);
+        if (isOnline()) netSend({ type: 'OFFENSE_BETS', data: state.bets.offenseBets });
+      } else {
+        setInstruction(`Waiting for ${oppLabel} to place offense bets...`);
+        const msg = await waitForNetMessage();
+        checkAbort(myId);
+        state.bets.offenseBets = msg.data;
+        renderField(state);
+        const anyOffBets = unbetPositions.some(p => (msg.data[p] || 0) > 0);
+        if (anyOffBets) {
+          const betSummary = unbetPositions.map(p => `${posLabel(p)}: $${msg.data[p]}`).join(', ');
+          await showMessage(`${oppLabel} Offense Bets`, `Offense bets: ${betSummary}`, 'Respond');
+          checkAbort(myId);
+        }
       }
 
       // Defense responds to offense-initiated bets
       const offBetPositions = unbetPositions.filter(p => (state.bets.offenseBets[p] || 0) > 0);
       if (offBetPositions.length > 0) {
         state.phase = 'DEFENSE_RESPOND_OFF';
-        if (defSide === 'ai') {
+        if (defSide === 'ai' && !isOnline()) {
           const aiResp = aiBetDefenseRespond(state, state.bets.offenseBets);
           state.bets.offInitDefResponses = aiResp.responses;
           state.bets.offInitDefRaises = aiResp.raises;
@@ -2417,19 +2630,34 @@ async function executeDown(state, offCards, defCards, myId) {
             checkAbort(myId);
           }
           renderField(state);
-        } else {
+        } else if (localIsDef) {
           setInstruction('Respond to offense side bets');
           renderHand([], state);
           await waitForDefenseRespondToOffBet(state);
           checkAbort(myId);
           renderField(state);
+          if (isOnline()) netSend({ type: 'DEF_RESPOND_OFF', data: { responses: state.bets.offInitDefResponses, raises: state.bets.offInitDefRaises } });
+        } else {
+          setInstruction(`Waiting for ${oppLabel} to respond...`);
+          const msg = await waitForNetMessage();
+          checkAbort(myId);
+          state.bets.offInitDefResponses = msg.data.responses;
+          state.bets.offInitDefRaises = msg.data.raises;
+          renderField(state);
+          const anyAction = offBetPositions.some(p => msg.data.responses[p] !== 'pass');
+          if (anyAction) {
+            const respSummary = offBetPositions
+              .map(p => `${posLabel(p)}: ${msg.data.responses[p]}${msg.data.responses[p]==='raise'?' $'+msg.data.raises[p]:''}`).join(', ');
+            await showMessage(`${oppLabel} Defense Response`, respSummary, 'Continue');
+            checkAbort(myId);
+          }
         }
 
         // Offense matches defense raises on offense-initiated bets
         const hasOffRaises = offBetPositions.some(p => (state.bets.offInitDefResponses[p]) === 'raise');
         if (hasOffRaises) {
           state.phase = 'OFFENSE_MATCH_DEF';
-          if (offSide === 'ai') {
+          if (offSide === 'ai' && !isOnline()) {
             state.bets.offInitOffMatched = aiBetOffenseMatchRaise(state);
             const matchSummary = offBetPositions.filter(p => state.bets.offInitDefResponses[p]==='raise')
               .map(p => `${posLabel(p)}: ${state.bets.offInitOffMatched[p]?'matched':'passed'}`).join(', ');
@@ -2438,10 +2666,20 @@ async function executeDown(state, offCards, defCards, myId) {
             checkAbort(myId);
             await showMessage('AI Match Decision', matchSummary, 'Continue');
             checkAbort(myId);
-          } else {
+          } else if (localIsOff) {
             setInstruction('Defense raised! Match or pass?');
             renderHand([], state);
             await waitForOffenseMatchDefRaise(state);
+            checkAbort(myId);
+            if (isOnline()) netSend({ type: 'OFFENSE_MATCHED', data: state.bets.offInitOffMatched });
+          } else {
+            setInstruction(`Waiting for ${oppLabel} to decide on raises...`);
+            const msg = await waitForNetMessage();
+            checkAbort(myId);
+            state.bets.offInitOffMatched = msg.data;
+            const matchSummary = offBetPositions.filter(p => state.bets.offInitDefResponses[p]==='raise')
+              .map(p => `${posLabel(p)}: ${msg.data[p]?'matched':'passed'}`).join(', ');
+            await showMessage(`${oppLabel} Match Decision`, matchSummary, 'Continue');
             checkAbort(myId);
           }
         }
@@ -2462,7 +2700,19 @@ async function executeDown(state, offCards, defCards, myId) {
   if (isPass) {
     state.phase='DICE_ROLL';
     setInstruction('Rolling the dice...');
-    oD=rollDice(); dD=rollDice();
+    if (isOnline()) {
+      // Host rolls dice, sends to guest
+      if (playerRole === 'host') {
+        oD=rollDice(); dD=rollDice();
+        netSend({ type: 'DICE', data: { offense: oD, defense: dD } });
+      } else {
+        const diceMsg = await waitForNetMessage();
+        checkAbort(myId);
+        oD = diceMsg.data.offense; dD = diceMsg.data.defense;
+      }
+    } else {
+      oD=rollDice(); dD=rollDice();
+    }
     state.down.offenseDice=oD; state.down.defenseDice=dD;
     await renderDiceRoll(oD, dD);
     checkAbort(myId);
@@ -2496,7 +2746,8 @@ async function executePossession(state, offenseSide, myId) {
   state.drive.offenseSide = offenseSide;
   resetDrive(state);
 
-  const offLabel = offenseSide==='player' ? 'You' : 'AI';
+  const offLabel = sideLabel(offenseSide);
+  const scoreKey = offenseSide;
   await showMessage(`${offLabel} on Offense`, `Starting at the 20 yard line. Get 10 yards in 3 downs for a first down!`, 'Start');
   checkAbort(myId);
 
@@ -2504,9 +2755,25 @@ async function executePossession(state, offenseSide, myId) {
 
   while (!possessionOver) {
     // Deal 9 cards to each side for this set of downs
-    ensureDeck(state, 18);
-    const offCards = dealCards(state.deck, 9);
-    const defCards = dealCards(state.deck, 9);
+    let offCards, defCards;
+    if (isOnline()) {
+      if (playerRole === 'host') {
+        ensureDeck(state, 18);
+        offCards = dealCards(state.deck, 9);
+        defCards = dealCards(state.deck, 9);
+        // Send both hands to guest (guest gets the opposite perspective)
+        netSend({ type: 'DEAL', data: { offCards, defCards } });
+      } else {
+        const dealMsg = await waitForNetMessage();
+        checkAbort(myId);
+        offCards = dealMsg.data.offCards;
+        defCards = dealMsg.data.defCards;
+      }
+    } else {
+      ensureDeck(state, 18);
+      offCards = dealCards(state.deck, 9);
+      defCards = dealCards(state.deck, 9);
+    }
 
     // Play 3 downs — players see full hand and pick 3 cards each down
     for (let dn=1; dn<=3; dn++) {
@@ -2524,9 +2791,9 @@ async function executePossession(state, offenseSide, myId) {
 
       if (state.drive.yardLine <= 0) {
         state.drive.yardLine = 0;
-        state.scores[offenseSide] += 7;
+        state.scores[scoreKey] += 7;
         renderScoreboard(state);
-        await showMessage('TOUCHDOWN!', `${offenseSide==='player'?'You':'AI'} scored! +7 points`);
+        await showMessage('TOUCHDOWN!', `${offLabel} scored! +7 points`);
         checkAbort(myId);
         possessionOver = true; break;
       }
@@ -2538,30 +2805,37 @@ async function executePossession(state, offenseSide, myId) {
         checkAbort(myId);
         state.drive.yardsGainedThisSet = 0;
         state.drive.yardsNeededForFirstDown = state.drive.yardLine;
-        break; // Exit the 3-down loop — will continue in the while loop with fresh cards
+        break;
       }
     }
 
     if (possessionOver) break;
 
-    // If first down was earned mid-set, continue to new set of downs
     if (state.drive.hasFirstDown) {
       state.drive.hasFirstDown = false;
       state.drive.downNumber = 1;
-      continue; // New set of 3 downs with fresh 9 cards
+      continue;
     }
 
     // Failed 3 downs — 4th down decision
     let decision;
     if (state.isOvertime) {
-      if (offenseSide==='player') {
-        // In OT, no FG option — just go for it or turnover
-        await showMessage('4th Down - Overtime','No field goals in overtime! You must go for it!');
+      decision = 'go';
+      const otLabel = isLocalSide(offenseSide) ? 'You must' : `${offLabel} must`;
+      await showMessage('4th Down - Overtime',`No field goals in overtime! ${otLabel} go for it!`);
+      checkAbort(myId);
+    } else if (isOnline()) {
+      // Online: local offense player chooses, remote waits
+      if (isLocalSide(offenseSide)) {
+        decision = await showFourthDownChoice();
         checkAbort(myId);
-        decision = 'go';
+        netSend({ type: 'FOURTH_DOWN', data: { decision } });
       } else {
-        decision = 'go';
-        await showMessage('4th Down - Overtime','AI must go for it! No field goals in overtime!');
+        setInstruction('Waiting for opponent\'s 4th down decision...');
+        const fdMsg = await waitForNetMessage();
+        checkAbort(myId);
+        decision = fdMsg.data.decision;
+        await showMessage('4th Down',`Opponent chose to ${decision==='fg'?'kick a Field Goal':'go for it'}!`);
         checkAbort(myId);
       }
     } else if (offenseSide==='player') {
@@ -2574,22 +2848,34 @@ async function executePossession(state, offenseSide, myId) {
     }
 
     if (decision==='fg') {
-      state.scores[offenseSide] += 3;
+      state.scores[scoreKey] += 3;
       renderScoreboard(state);
-      await showMessage('Field Goal!',`${offenseSide==='player'?'You':'AI'} scored 3 points!`);
+      await showMessage('Field Goal!',`${offLabel} scored 3 points!`);
       checkAbort(myId);
       possessionOver = true;
     } else {
       // 4th down: deal 3 new cards each
-      ensureDeck(state, 6);
-      const o4=dealCards(state.deck,3), d4=dealCards(state.deck,3);
+      let o4, d4;
+      if (isOnline()) {
+        if (playerRole === 'host') {
+          ensureDeck(state, 6);
+          o4 = dealCards(state.deck, 3); d4 = dealCards(state.deck, 3);
+          netSend({ type: 'DEAL', data: { offCards: o4, defCards: d4 } });
+        } else {
+          const dealMsg = await waitForNetMessage();
+          checkAbort(myId);
+          o4 = dealMsg.data.offCards; d4 = dealMsg.data.defCards;
+        }
+      } else {
+        ensureDeck(state, 6);
+        o4 = dealCards(state.deck, 3); d4 = dealCards(state.deck, 3);
+      }
       resetDown(state);
       state.drive.downNumber = 4;
       const result = await executeDown(state, o4, d4, myId);
 
       state.drive.yardLine = Math.max(0, state.drive.yardLine - result.yards);
 
-      // Check if 4th down converted (gained enough for first down)
       const yardsGained4th = state.drive.yardsGainedThisSet + result.yards;
       if (yardsGained4th >= state.drive.yardsNeededForFirstDown && state.drive.yardLine > 0) {
         await showMessage('First Down!','Converted on 4th down!');
@@ -2597,7 +2883,7 @@ async function executePossession(state, offenseSide, myId) {
         state.drive.yardsGainedThisSet=0;
         state.drive.yardsNeededForFirstDown=state.drive.yardLine;
         state.drive.hasFirstDown=true;
-        continue; // Continue possession with new downs
+        continue;
       }
 
       state.discardPile.push(...Object.values(state.down.offensePlacements).filter(Boolean));
@@ -2605,9 +2891,9 @@ async function executePossession(state, offenseSide, myId) {
 
       if (state.drive.yardLine<=0) {
         state.drive.yardLine=0;
-        state.scores[offenseSide]+=6;
+        state.scores[scoreKey]+=7;
         renderScoreboard(state);
-        await showMessage('TOUCHDOWN!',`${offenseSide==='player'?'You':'AI'} scored on 4th down! +7 points`);
+        await showMessage('TOUCHDOWN!',`${offLabel} scored on 4th down! +7 points`);
         checkAbort(myId);
       } else {
         await showMessage('Turnover on Downs','Failed to convert. Possession over.');
@@ -2626,14 +2912,30 @@ async function executeOvertimePossession(state, offenseSide, myId) {
   state.drive.yardsNeededForFirstDown = 5;
   state.drive.hasFirstDown = true; // Always "& Goal" in OT
 
-  const offLabel = offenseSide==='player' ? 'You' : 'AI';
+  const offLabel = sideLabel(offenseSide);
+  const scoreKey = offenseSide;
   await showMessage(`OT — ${offLabel} on Offense`, '3 downs from the 5 yard line. 9 cards. Score to win!', 'Go');
   checkAbort(myId);
 
   // Deal 9 cards each for 3 downs
-  ensureDeck(state, 18);
-  const offCards = dealCards(state.deck, 9);
-  const defCards = dealCards(state.deck, 9);
+  let offCards, defCards;
+  if (isOnline()) {
+    if (playerRole === 'host') {
+      ensureDeck(state, 18);
+      offCards = dealCards(state.deck, 9);
+      defCards = dealCards(state.deck, 9);
+      netSend({ type: 'DEAL', data: { offCards, defCards } });
+    } else {
+      const dealMsg = await waitForNetMessage();
+      checkAbort(myId);
+      offCards = dealMsg.data.offCards;
+      defCards = dealMsg.data.defCards;
+    }
+  } else {
+    ensureDeck(state, 18);
+    offCards = dealCards(state.deck, 9);
+    defCards = dealCards(state.deck, 9);
+  }
 
   let scored = false;
 
@@ -2652,9 +2954,9 @@ async function executeOvertimePossession(state, offenseSide, myId) {
 
     if (state.drive.yardLine <= 0) {
       state.drive.yardLine = 0;
-      state.scores[offenseSide] += 7;
+      state.scores[scoreKey] += 7;
       renderScoreboard(state);
-      await showMessage('TOUCHDOWN!', `${offenseSide==='player'?'You':'AI'} scored in overtime! +7 points`);
+      await showMessage('TOUCHDOWN!', `${offLabel} scored in overtime! +7 points`);
       checkAbort(myId);
       scored = true;
       break;
@@ -2662,7 +2964,7 @@ async function executeOvertimePossession(state, offenseSide, myId) {
   }
 
   if (!scored) {
-    await showMessage('No Score', `${offenseSide==='player'?'You':'AI'} failed to reach the end zone. ${state.drive.yardLine} yards short.`);
+    await showMessage('No Score', `${offLabel} failed to reach the end zone. ${state.drive.yardLine} yards short.`);
     checkAbort(myId);
   }
 }
@@ -2679,7 +2981,6 @@ async function startGame() {
   renderGameInfo(state);
   hideResult(); hideDiceArea(); hideBettingPanel();
   renderHand([], state);
-  unlockConfig();
   // Show carried-over balance if exists
   if (persistentWallets) {
     state.wallets.player = persistentWallets.player;
@@ -2688,25 +2989,47 @@ async function startGame() {
   renderWallets(state);
 
   try {
-    const contMsg = persistentWallets ? ` (You: $${persistentWallets.player} | AI: $${persistentWallets.ai})` : '';
-    setInstruction('Set your bets!' + contMsg);
-    setActionBtn('Set your bets!', false, null);
-    await waitForConfig();
-    checkAbort(myId);
+    const oppLabel = sideLabel('ai');
+
+    if (isOnline()) {
+      // Online: config was set in lobby, apply it directly
+      $('.config-bar').style.display = 'none';
+      if (onlineConfig) {
+        state.buyIn = onlineConfig.buyIn;
+        state.startingBalance = onlineConfig.startingBalance;
+      }
+      if (persistentWallets === null) {
+        state.wallets.player = state.startingBalance;
+        state.wallets.ai = state.startingBalance;
+      } else {
+        state.wallets.player = persistentWallets.player;
+        state.wallets.ai = persistentWallets.ai;
+      }
+      state.wallets.player -= state.buyIn;
+      state.wallets.ai -= state.buyIn;
+      state.pot = state.buyIn * 2;
+      renderWallets(state);
+    } else {
+      // AI mode: local player sets config
+      unlockConfig();
+      const contMsg = persistentWallets ? ` (You: $${persistentWallets.player} | ${oppLabel}: $${persistentWallets.ai})` : '';
+      setInstruction('Set your bets!' + contMsg);
+      setActionBtn('Set your bets!', false, null);
+      await waitForConfig();
+      checkAbort(myId);
+    }
 
     await showMessage('Ball Crap',`Football meets Craps! Buy-in: $${state.buyIn}. Pot: $${state.pot}. Winner takes all!`,'Let\'s Go!');
     checkAbort(myId);
 
-    // Player on offense
+    // Always 'player' first offense, 'ai' second — in online mode host='player', guest='ai'
     state.driveNumber = 1;
     await executePossession(state, 'player', myId);
     checkAbort(myId);
 
-    // Switch sides
-    await showMessage('Switching Sides!',`Score: You ${state.scores.player} - AI ${state.scores.ai}. Now the AI goes on offense!`,'Continue');
+    await showMessage('Switching Sides!',`Score: You ${state.scores.player} - ${oppLabel} ${state.scores.ai}. Now ${oppLabel} goes on offense!`,'Continue');
     checkAbort(myId);
 
-    // AI on offense
     state.driveNumber = 2;
     await executePossession(state, 'ai', myId);
     checkAbort(myId);
@@ -2720,36 +3043,35 @@ async function startGame() {
         await showMessage('Overtime!',`Round ${state.overtimeRound} — 3 downs each, 5 yard line, 9 cards. Score to win!`,'Start OT');
         checkAbort(myId);
 
-        // Both sides always get a chance in each OT round
         const scoreBefore = { player: state.scores.player, ai: state.scores.ai };
 
-        // Player OT possession
         await executeOvertimePossession(state, 'player', myId);
         checkAbort(myId);
 
-        const playerScored = state.scores.player > scoreBefore.player;
-        if (playerScored) {
-          await showMessage('AI Must Answer!', `You scored! AI gets a chance to match.`, 'Continue');
+        const firstScored = state.scores.player > scoreBefore.player || state.scores.ai > scoreBefore.ai;
+        if (firstScored) {
+          await showMessage(`${oppLabel} Must Answer!`, `You scored! ${oppLabel} gets a chance to match.`, 'Continue');
           checkAbort(myId);
         }
 
-        // AI OT possession
         await executeOvertimePossession(state, 'ai', myId);
         checkAbort(myId);
-
-        // After both play, check: if still tied, loop again
-        // If different, the while condition will exit
       }
     }
 
     const winnerSide = state.scores.player>state.scores.ai ? 'player' : 'ai';
-    const winnerLabel = winnerSide === 'player' ? 'You Win!' : 'AI Wins!';
+    const winnerLabel = isLocalSide(winnerSide) ? 'You Win!' : `${oppLabel} Wins!`;
     state.wallets[winnerSide] += state.pot;
     state.pot = 0;
     persistentWallets = { player: state.wallets.player, ai: state.wallets.ai };
     renderWallets(state);
-    await showMessage('Game Over!',`${winnerLabel} Final: You ${state.scores.player} - AI ${state.scores.ai}. Pot ($${state.buyIn * 2}) awarded! Your credits: $${state.wallets.player}`,'Play Again');
-    startGame();
+    await showMessage('Game Over!',`${winnerLabel} Final: You ${state.scores.player} - ${oppLabel} ${state.scores.ai}. Pot ($${state.buyIn * 2}) awarded!`,'Play Again');
+    if (isOnline()) {
+      netDisconnect();
+      showModeSelect();
+    } else {
+      startGame();
+    }
 
   } catch(e) {
     if (e.message !== 'GAME_ABORTED') throw e;
