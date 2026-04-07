@@ -342,7 +342,7 @@
     .restart-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
 
     .copyright {
-      position: fixed; bottom: 8px; right: 10px; z-index: 50;
+      position: fixed; bottom: 8px; right: 10px; z-index: 250;
       font-family: var(--font-main); font-size: 0.35rem;
       color: #444466; pointer-events: none; user-select: none;
     }
@@ -1893,14 +1893,17 @@ function showBetResults(state) {
       const lbl = el('div','bet-position__label', posLabel(pos));
       row.appendChild(lbl);
 
-      const isPlayerWin = r.winner === 'player';
-      const isAiWin = r.winner === 'ai';
-      const cls = isPlayerWin ? 'bet-result-text bet-result-text--win' :
-                  isAiWin ? 'bet-result-text bet-result-text--loss' :
+      const offSide = state.drive.offenseSide;
+      const defSide = getDefenseSide(state);
+      const isLocalWin = isLocalSide(r.winner);
+      const isLocalLoss = r.winner !== 'tie' && !isLocalWin;
+      const winnerRole = r.winner === offSide ? 'Offense' : 'Defense';
+      const cls = isLocalWin ? 'bet-result-text bet-result-text--win' :
+                  isLocalLoss ? 'bet-result-text bet-result-text--loss' :
                   'bet-result-text bet-result-text--push';
       const txt = r.winner === 'tie' ? r.desc :
-                  isPlayerWin ? `You win $${r.amount}! (${r.desc})` :
-                  `AI wins $${r.amount} (${r.desc})`;
+                  isLocalWin ? `You win $${r.amount}! (${r.desc})` :
+                  `${winnerRole} wins $${r.amount} (${r.desc})`;
       const resEl = el('div', cls, txt);
       resEl.style.flex = '1';
       row.appendChild(resEl);
