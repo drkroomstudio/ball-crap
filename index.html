@@ -1239,7 +1239,7 @@ function aiBetOffenseMatchRaise(state) {
 // ============================================================
 // PLAYER BETTING UI
 // ============================================================
-function createMiniCard(card, faceDown) {
+function createMiniCard(card, faceDown, label) {
   const c = el('div','card');
   c.style.cssText = 'width:36px;height:50px;pointer-events:none;';
   if (!faceDown) c.classList.add('card--flipped');
@@ -1252,6 +1252,11 @@ function createMiniCard(card, faceDown) {
   front.appendChild(el('div','card__suit',SUIT_SYM[card.suit]));
   inner.appendChild(front);
   c.appendChild(inner);
+  if (faceDown && label) {
+    const overlay = el('div','card__hidden-label');
+    overlay.innerHTML = label + '<br>?';
+    c.appendChild(overlay);
+  }
   return c;
 }
 
@@ -1281,21 +1286,21 @@ function waitForDefenseBet(state) {
         const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
 
-        // Show defense card (face up for player defense) and offense card (face down)
+        // Both cards face-down with position labels during betting
         const cardArea = el('div','bet-position__card-area');
         const pIsOff = isLocalSide(state.drive.offenseSide);
         const defCard = state.down.defensePlacements[defPos];
         const offCard = state.down.offensePlacements[pos];
+        const offLbl = posLabel(pos);
+        const defLbl = posLabel(defPos);
         if (pIsOff) {
-          // Player is offense, AI is defense — player sees their own offense card, defense face-down
-          cardArea.appendChild(createMiniCard(offCard, false));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(defCard, true));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
         } else {
-          // Player is defense — sees their defense card, offense face-down
-          cardArea.appendChild(createMiniCard(defCard, false));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(offCard, true));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
         }
         row.appendChild(cardArea);
 
@@ -1379,20 +1384,22 @@ function waitForOffenseResponse(state) {
         const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
 
-        // Show cards
+        // Both cards face-down with position labels during betting
         const cardArea = el('div','bet-position__card-area');
         const pIsOff = isLocalSide(state.drive.offenseSide);
         const defPos = MATCHUPS[pos];
         const defCard = state.down.defensePlacements[defPos];
         const offCard = state.down.offensePlacements[pos];
+        const offLbl = posLabel(pos);
+        const defLbl = posLabel(defPos);
         if (pIsOff) {
-          cardArea.appendChild(createMiniCard(offCard, false));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(defCard, true));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
         } else {
-          cardArea.appendChild(createMiniCard(defCard, false));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(offCard, true));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
         }
         row.appendChild(cardArea);
 
@@ -1561,14 +1568,16 @@ function waitForOffenseInitiateBet(state, unbetPositions) {
         const defPos = MATCHUPS[pos];
         const defCard = state.down.defensePlacements[defPos];
         const offCard = state.down.offensePlacements[pos];
+        const offLbl = posLabel(pos);
+        const defLbl = posLabel(defPos);
         if (pIsOff) {
-          cardArea.appendChild(createMiniCard(offCard, false));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(defCard, true));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
         } else {
-          cardArea.appendChild(createMiniCard(defCard, false));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(offCard, true));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
         }
         row.appendChild(cardArea);
 
@@ -1648,14 +1657,16 @@ function waitForDefenseRespondToOffBet(state) {
         const defPos = MATCHUPS[pos];
         const defCard = state.down.defensePlacements[defPos];
         const offCard = state.down.offensePlacements[pos];
+        const offLbl = posLabel(pos);
+        const defLbl = posLabel(defPos);
         if (!pIsOff) {
-          cardArea.appendChild(createMiniCard(defCard, false));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(offCard, true));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
         } else {
-          cardArea.appendChild(createMiniCard(offCard, false));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(defCard, true));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
         }
         row.appendChild(cardArea);
 
