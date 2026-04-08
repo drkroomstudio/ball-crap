@@ -4,13 +4,17 @@
 
 **Ball Crap** is a card/dice American football game web app (1P vs AI + online 1v1).
 
-**Tech stack**: Single self-contained HTML file (`index.html`, ~2986 lines). All CSS in `<style>`, all JS in `<script>`. No dependencies, no Node.js locally. Opens directly in a browser.
+**Tech stack**: Single self-contained HTML file (`index.html`, ~3113 lines). All CSS in `<style>`, all JS in `<script>`. No dependencies, no Node.js locally. Opens directly in a browser.
 
 **File**: `C:\Users\edr_2\OneDrive\Desktop\Claude Projects\Ball_01\index.html`
 
 **Relay server**: `server/relay.js` (Node.js + ws), deployed to Render at `https://ball-crap.onrender.com`
 
 **GitHub**: `https://github.com/delgado-plus/ball-crap` — branch `multiplayer` has all online work; `master` is stable 1P AI only.
+
+**GitHub Pages**: Live at `https://delgado-plus.github.io/ball-crap/` (serves `multiplayer` branch)
+
+**PR**: https://github.com/delgado-plus/ball-crap/pull/1 (multiplayer → master)
 
 ---
 
@@ -36,6 +40,7 @@ A=14, K=13, Q=12, J=11, 2-10=face value
   - Offense initiates on $0 positions → defense responds → offense matches
 - Pass/fold penalty = 10% of buy-in
 - Wallet keys always `'player'` and `'ai'`
+- **Bet step size**: `Math.max(1, Math.floor(buyIn / 5))` — $2 increments with $10 buy-in
 
 ---
 
@@ -48,6 +53,7 @@ In online mode: host = `'player'`, guest = `'ai'`. Only `isLocalSide()` knows th
 ```javascript
 let gameMode = 'ai';    // 'ai' or 'online'
 let playerRole = null;  // 'host' or 'guest' (online only)
+let onlineConfig = null; // { buyIn, startingBalance } set in lobby
 
 function isOnline() { return gameMode === 'online'; }
 
@@ -64,9 +70,14 @@ function sideLabel(side) {
 function getDefenseSide(state) {
   return state.drive.offenseSide === 'player' ? 'ai' : 'player';
 }
-```
 
-`sideToWalletKey()`, `localWalletKey()`, `remoteWalletKey()` were REMOVED — no longer needed.
+// Returns position label from local player's perspective
+function betPosLabel(pos, state) {
+  const pIsOff = isLocalSide(state.drive.offenseSide);
+  if (pIsOff) return posLabel(pos);   // WR1, RB, WR2
+  return posLabel(MATCHUPS[pos]);     // CB1, DB, CB2
+}
+```
 
 ### State Object
 ```javascript
@@ -87,7 +98,7 @@ function getDefenseSide(state) {
 - `gameId` increments on restart; `checkAbort(myId)` throws `'GAME_ABORTED'` if stale
 - `clearAllSlotHandlers()` strips click handlers via cloneNode
 
-### WebSocket Module (~lines 740-790)
+### WebSocket Module
 ```javascript
 netConnect(url)     // returns Promise, resolves on open
 netSend(obj)        // JSON stringify + send
@@ -100,19 +111,22 @@ netDisconnect()     // close socket
 ## 4. Online Multiplayer — Current State
 
 ### What Works
-- Mode select screen (Play vs AI / Play Online)
-- Lobby UI: Create Room (4-letter code), Join Room
+- Mode select: Play vs AI / Create Game (host) / Join Game (guest)
+- **Host lobby flow**: Set Bets → config locks → Create Room appears → 4-letter code
+- **Guest lobby flow**: Join Room only (no config — receives host's config via CONFIG message)
 - Relay server live on Render, WebSocket connections confirmed
-- Host/guest roles established, OPPONENT_JOINED syncs both sides
+- Host sends CONFIG message on OPPONENT_JOINED; guest applies it
+- Config bar hidden during online games — neither player can modify
 - Card placement sync (OFFENSE_DONE / DEFENSE_DONE messages)
 - Dice sync (host rolls, sends DICE message to guest)
-- All 6 betting rounds have online paths:
-  - `defSide === 'ai'` → AI auto
-  - `localIsDef`/`localIsOff` → local player UI + `netSend`
-  - else → `waitForNetMessage()` (remote player)
+- All 6 betting rounds guarded with `&& !isOnline()` to prevent AI auto-play
+- All 6 betting rounds have online paths via `localIsDef`/`localIsOff` + `netSend`/`waitForNetMessage`
+- Bet result labels show "Offense wins" / "Defense wins" (not "AI wins")
+- Copyright visible on all screens (z-index 250)
 
 ### Message Types Used
 ```
+CONFIG          — host sends buy-in/balance config to guest on join
 DEAL            — host sends dealt cards to guest
 OFFENSE_DONE    — offense player sends their placements
 DEFENSE_DONE    — defense player sends their placements
@@ -127,34 +141,57 @@ DEF_RESPOND_OFF — local defense responds to offense bets
 OFFENSE_MATCHED — local offense sends match decision
 ```
 
-### Last Known Bug — RESOLVED
-~~Clicking "Set" in AI mode doesn't advance the game.~~ **Fixed** — verified 2026-04-07. Set button works correctly: buy-in deducts, pot fills, overlay appears, card placement and betting all functional in AI mode.
+---
+
+## 5. CURRENT BUG — MUST FIX FIRST
+
+### Betting panel labels + card visibility during betting
+
+**Problem**: In the betting panel UI (the bottom panel with mini cards and +/- controls):
+1. When on **defense**, the position labels show offense names (WR1, RB) instead of defense names (CB1, DB)
+2. The local player's own cards are shown face-up in the mini card area — they should be **face-down** for both sides during betting, so neither player sees card values before reveal
+3. Face-down mini cards in the betting panel need a **position label** (CB1, WR1, etc.) so the player knows which matchup they're betting on
+
+**What was already done**:
+- `betPosLabel(pos, state)` helper created — returns CB1/DB/CB2 when on defense, WR1/RB/WR2 when on offense
+- All 7 `posLabel(pos)` calls in betting panels replaced with `betPosLabel(pos, state)`
+- All 4 `state.drive.offenseSide === 'player'` checks in betting panels replaced with `isLocalSide(state.drive.offenseSide)`
+- Face-down field cards now show "CB1?" / "WR1?" overlay via `.card__hidden-label` CSS class
+
+**What still needs fixing**:
+- The **mini cards** in betting panels (created by `createMiniCard()`) that are face-down need a position label overlay, similar to how `renderSlotCard` adds `.card__hidden-label`
+- Verify that `betPosLabel` is actually being called correctly in all 7 betting panel functions — the eval test showed it works (`betPosLabel('wr1', defDrive) === 'CB1'`) but the user reports it's still showing WR1 when on defense
+- The betting panel label on line 1281 shows `betPosLabel(pos, state)` but the **mini card label** (separate from the row label) next to the face-down card still needs the opponent's position
+
+**Files to check**: `waitForDefenseBet` (~line 1258), `waitForOffenseResponse` (~line 1340), `waitForDefenseMatch` (~line 1460), `waitForOffenseInitiateBet` (~line 1530), `waitForDefenseRespondToOffBet` (~line 1600), `waitForOffenseMatchDefRaise` (~line 1720), `showBetResults` (~line 1890)
+
+**How `createMiniCard` works** (search for `function createMiniCard`): Creates a small card element. When `faceDown=true`, it shows the card back. Need to add a label overlay like the field cards have.
 
 ---
 
-## 5. Function Map (line numbers, 2986-line file)
+## 6. Function Map (approximate line numbers, ~3113-line file)
 
 | Area | Lines | Key Functions |
 |------|-------|---------------|
-| Utils | ~455 | `sleep`, `randomInt`, `$`, `$$`, `el` |
-| Deck | ~474 | `createDeck`, `shuffleDeck`, `dealCards` |
-| Rules | ~492 | `rollDice`, `resolveDown` |
-| AI Cards | ~512 | `aiSortCards`, `aiPlaceDefense`, `aiPlaceOffense`, `aiFourthDownDecision` |
-| Online UI | ~617 | `showModeSelect`, `hideModeSelect`, `showLobby`, `createRoom`, `joinRoom` |
-| WebSocket | ~740 | `netConnect`, `netSend`, `waitForNetMessage`, `netDisconnect` |
-| Online Helpers | ~795 | `isOnline`, `isLocalSide`, `sideLabel` |
-| Betting Helpers | ~830 | `getNonRockPositions`, `getCardStrength`, `posLabel`, `renderWallets`, `readConfigToState`, `applyConfig`, `waitForConfig`, `unlockConfig`, `getDefenseSide` |
-| AI Betting | ~997 | `aiBetAsDefense`, `aiBetAsOffenseResponse`, `aiBetDefenseMatch`, `aiBetAsOffenseInitiate`, `aiBetDefenseRespond`, `aiBetOffenseMatchRaise` |
-| Player Betting UI | ~1150 | `waitForDefenseBet`, `waitForOffenseResponse`, `waitForDefenseMatch`, `waitForOffenseInitiateBet`, `waitForDefenseRespondToOffBet`, `waitForOffenseMatchDefRaise` |
-| Bet Resolution | ~1500 | `resolveCardComparison`, `resolveBets`, `showBetResults` |
-| Card/Dice UI | ~1650 | `createCardEl`, `flipCard`, `createDie`, `setDie`, `animateDice` |
-| UI Helpers | ~1700 | `renderScoreboard`, `renderGameInfo`, `renderField`, `renderHand`, `setInstruction`, `showResult`, `setActionBtn`, `showMessage`, `showFourthDownChoice` |
-| Player Input | ~1870 | `waitForPlacement`, `waitForRock`, `clearAllSlotHandlers`, `waitForNext` |
-| Game Engine | ~2100 | `checkAbort`, `restartGame`, `createState`, `resetDrive`, `resetDown`, `ensureDeck`, `executeDown`, `executePossession`, `executeOvertimePossession`, `startGame` |
+| Utils | ~625 | `sleep`, `randomInt`, `$`, `$$`, `el` |
+| Mode Select & Networking | ~640 | `selectMode`, `selectJoin`, `lobbySetConfig`, `lobbyResetConfig`, `lobbyBack`, `showModeSelect`, `createRoom`, `joinRoom` |
+| WebSocket | ~760 | `netConnect`, `netSend`, `waitForNetMessage`, `netDisconnect` |
+| Online Helpers | ~810 | `isOnline`, `isLocalSide`, `sideLabel` |
+| Deck | ~830 | `createDeck`, `shuffleDeck`, `dealCards` |
+| Rules | ~850 | `rollDice`, `resolveDown` |
+| AI Cards | ~870 | `aiSortCards`, `aiPlaceDefense`, `aiPlaceOffense`, `aiFourthDownDecision` |
+| Betting Helpers | ~920 | `getNonRockPositions`, `getCardStrength`, `posLabel`, `betPosLabel`, `renderWallets`, `readConfigToState`, `applyConfig`, `waitForConfig`, `unlockConfig`, `getDefenseSide` |
+| AI Betting | ~1080 | `aiBetAsDefense`, `aiBetAsOffenseResponse`, `aiBetDefenseMatch`, `aiBetAsOffenseInitiate`, `aiBetDefenseRespond`, `aiBetOffenseMatchRaise` |
+| Player Betting UI | ~1250 | `waitForDefenseBet`, `waitForOffenseResponse`, `waitForDefenseMatch`, `waitForOffenseInitiateBet`, `waitForDefenseRespondToOffBet`, `waitForOffenseMatchDefRaise` |
+| Bet Resolution | ~1880 | `resolveCardComparison`, `resolveBets`, `showBetResults` |
+| Card/Dice UI | ~1930 | `createCardEl`, `createMiniCard`, `flipCard`, `createDie`, `setDie`, `animateDice` |
+| UI Helpers | ~1970 | `renderScoreboard`, `renderGameInfo`, `renderSlotCard`, `renderField`, `renderHand`, `setInstruction`, `showResult`, `setActionBtn`, `showMessage`, `showFourthDownChoice` |
+| Player Input | ~2150 | `waitForPlacement`, `waitForRock`, `clearAllSlotHandlers`, `waitForNext` |
+| Game Engine | ~2290 | `checkAbort`, `restartGame`, `createState`, `resetDrive`, `resetDown`, `ensureDeck`, `executeDown`, `executePossession`, `executeOvertimePossession`, `startGame` |
 
 ---
 
-## 6. executeDown Flow
+## 7. executeDown Flow
 
 ```
 1. Player on offense:
@@ -172,28 +209,33 @@ OFFENSE_MATCHED — local offense sends match decision
 
 ---
 
-## 7. Pending Work (Priority Order)
+## 8. Pending Work (Priority Order)
 
-1. ~~**[BLOCKER] Fix Set button / applyConfig bug**~~ — RESOLVED 2026-04-07
+1. **[BUG] Fix betting panel labels + mini card labels** — see Section 5 above
 2. **Verify online betting** — Test online mode full betting flow end-to-end
 3. **Game-over for online** — winner announced, rematch option returns to lobby
 4. **Polish**: timeout handling, reconnection if WebSocket drops
 5. **Pass/fold unification** — both exist with same penalty, unify to one term
 6. **Visual Phase 2** — football field layout improvements
+7. **Spectator Betting Expansion** — see memory file `project_spectator_betting.md`
 
 ---
 
-## 8. HTML Structure
+## 9. HTML Structure
 
 ```
 body
+  .mode-select (fullscreen overlay)
+    .mode-select__buttons (Play vs AI / Create Game / Join Game)
+    .lobby
+      #lobbyConfig (buy-in + balance inputs + Set Bets button — host only)
+      #lobbyCreate (Create button + room code — appears after Set)
+      #lobbyJoin (code input + Join button — guest only)
   button.restart-btn
-  div.copyright
-  .mode-select (fullscreen overlay: Play vs AI / Play Online)
-    .lobby (Create Room / Join Room)
+  div.copyright (z-index 250)
   .conn-status (online connection indicator)
   #app
-    .config-bar (buy-in + balance inputs + Set button)
+    .config-bar (buy-in + balance inputs + Set button — hidden in online mode)
     .wallet-bar (player credits | pot | AI credits)
     .scoreboard
     .game-info (drive | down | yard line)
@@ -209,11 +251,11 @@ body
 
 ---
 
-## 9. Project Files
+## 10. Project Files
 
 ```
 Ball_01/
-  index.html          — The game (~2986 lines), multiplayer branch
+  index.html          — The game (~3113 lines), multiplayer branch
   HANDOFF.md          — This document
   server/
     relay.js          — Node.js WebSocket relay (~105 lines)
@@ -224,9 +266,23 @@ Ball_01/
 
 ---
 
-## 10. Dev Setup
+## 11. Dev Setup
 
 - **Local preview**: Run `serve.bat` (or `serve.ps1`), open `http://localhost:3001`
 - **Two-player local test**: Open in two **separate browser windows** (not tabs — tabs share JS state and break the game)
-- **Relay URL**: `wss://ball-crap.onrender.com` (hardcoded in `netConnect()` call in `showLobby()`)
+- **Relay URL**: `wss://ball-crap.onrender.com` (hardcoded in `netConnect()`)
 - **Git**: `master` = stable AI-only; `multiplayer` = all online work
+- **GitHub Pages**: `multiplayer` branch → `https://delgado-plus.github.io/ball-crap/`
+
+---
+
+## 12. Uncommitted Changes
+
+There are uncommitted changes in `index.html` on the `multiplayer` branch that include:
+- `betPosLabel()` helper function added
+- All betting panel `posLabel(pos)` → `betPosLabel(pos, state)`
+- All betting panel `offenseSide === 'player'` → `isLocalSide(state.drive.offenseSide)`
+- Face-down field cards show position label + `?` via `.card__hidden-label` CSS
+- `.card__hidden-label` CSS class added
+
+These changes are **partially working** — the `betPosLabel` function returns correct values but the user reports labels still show WR1 when on defense. Needs debugging.

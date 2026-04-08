@@ -236,6 +236,12 @@
       background: var(--card-back); border: 2px solid var(--card-back-pattern);
       background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--card-back-pattern) 4px, var(--card-back-pattern) 5px);
     }
+    .card__hidden-label {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-main); font-size: 0.45rem; color: var(--text-gold);
+      text-align: center; line-height: 1.4; z-index: 2;
+      text-shadow: 0 0 6px rgba(0,0,0,0.8); pointer-events: none;
+    }
     .card__front {
       background: var(--card-face); border: 2px solid var(--card-border);
       transform: rotateY(180deg); padding: 3px;
@@ -999,6 +1005,14 @@ function posLabel(pos) {
          pos === 'cb1' ? 'CB1' : pos === 'cb2' ? 'CB2' : 'DB';
 }
 
+// Returns the position label from the local player's perspective
+// pos is always an offense position (wr1/rb/wr2) since bets track offense slots
+function betPosLabel(pos, state) {
+  const pIsOff = isLocalSide(state.drive.offenseSide);
+  if (pIsOff) return posLabel(pos); // offense player sees WR1, RB, WR2
+  return posLabel(MATCHUPS[pos]);   // defense player sees CB1, DB, CB2
+}
+
 function renderWallets(state) {
   $('.wallet__amount--player').textContent = '$' + state.wallets.player;
   $('.wallet__amount--ai').textContent = '$' + state.wallets.ai;
@@ -1264,12 +1278,12 @@ function waitForDefenseBet(state) {
         const defPos = MATCHUPS[pos];
 
         // Show position labels
-        const lbl = el('div','bet-position__label', posLabel(pos));
+        const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
 
         // Show defense card (face up for player defense) and offense card (face down)
         const cardArea = el('div','bet-position__card-area');
-        const pIsOff = state.drive.offenseSide === 'player';
+        const pIsOff = isLocalSide(state.drive.offenseSide);
         const defCard = state.down.defensePlacements[defPos];
         const offCard = state.down.offensePlacements[pos];
         if (pIsOff) {
@@ -1362,12 +1376,12 @@ function waitForOffenseResponse(state) {
         const row = el('div','bet-position');
         row.style.flexWrap = 'wrap';
 
-        const lbl = el('div','bet-position__label', posLabel(pos));
+        const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
 
         // Show cards
         const cardArea = el('div','bet-position__card-area');
-        const pIsOff = state.drive.offenseSide === 'player';
+        const pIsOff = isLocalSide(state.drive.offenseSide);
         const defPos = MATCHUPS[pos];
         const defCard = state.down.defensePlacements[defPos];
         const offCard = state.down.offensePlacements[pos];
@@ -1481,7 +1495,7 @@ function waitForDefenseMatch(state) {
       positionsWithRaise.forEach(pos => {
         const raiseAmt = state.bets.raiseAmounts[pos];
         const row = el('div','bet-position');
-        const lbl = el('div','bet-position__label', posLabel(pos));
+        const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
 
         const info = el('div','bet-position__label','Raise: $' + raiseAmt);
@@ -1539,11 +1553,11 @@ function waitForOffenseInitiateBet(state, unbetPositions) {
 
       unbetPositions.forEach(pos => {
         const row = el('div','bet-position');
-        const lbl = el('div','bet-position__label', posLabel(pos));
+        const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
 
         const cardArea = el('div','bet-position__card-area');
-        const pIsOff = state.drive.offenseSide === 'player';
+        const pIsOff = isLocalSide(state.drive.offenseSide);
         const defPos = MATCHUPS[pos];
         const defCard = state.down.defensePlacements[defPos];
         const offCard = state.down.offensePlacements[pos];
@@ -1626,11 +1640,11 @@ function waitForDefenseRespondToOffBet(state) {
         const row = el('div','bet-position');
         row.style.flexWrap = 'wrap';
 
-        const lbl = el('div','bet-position__label', posLabel(pos));
+        const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
 
         const cardArea = el('div','bet-position__card-area');
-        const pIsOff = state.drive.offenseSide === 'player';
+        const pIsOff = isLocalSide(state.drive.offenseSide);
         const defPos = MATCHUPS[pos];
         const defCard = state.down.defensePlacements[defPos];
         const offCard = state.down.offensePlacements[pos];
@@ -1734,7 +1748,7 @@ function waitForOffenseMatchDefRaise(state) {
       positions.forEach(pos => {
         const raiseAmt = state.bets.offInitDefRaises[pos];
         const row = el('div','bet-position');
-        const lbl = el('div','bet-position__label', posLabel(pos));
+        const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
         const info = el('div','bet-position__label','Raise: $' + raiseAmt);
         info.style.cssText = 'color:var(--accent-orange);min-width:auto;flex:1;';
@@ -1890,7 +1904,7 @@ function showBetResults(state) {
       const r = results[pos];
       if (!r || r.amount === 0) return;
       const row = el('div','bet-position');
-      const lbl = el('div','bet-position__label', posLabel(pos));
+      const lbl = el('div','bet-position__label', betPosLabel(pos, state));
       row.appendChild(lbl);
 
       const offSide = state.drive.offenseSide;
@@ -1995,6 +2009,12 @@ function renderSlotCard(sel, card, showFace, label) {
   }
   const ce = createCardEl(card, !showFace);
   ce.classList.add('card--disabled');
+  if (!showFace) {
+    // Add position label + question mark on face-down cards
+    const overlay = el('div','card__hidden-label');
+    overlay.innerHTML = label + '<br>?';
+    ce.appendChild(overlay);
+  }
   const lb = $('.field__slot-label', slot);
   if (lb) lb.after(ce); else slot.prepend(ce);
 }
@@ -2004,12 +2024,13 @@ function renderField(state) {
   const revealed = ['REVEAL','DICE_ROLL','RESOLVE_DOWN','SHOW_BET_RESULTS'].includes(state.phase);
   const pIsOff = isLocalSide(state.drive.offenseSide);
 
-  renderSlotCard('.field__slot--cb1', dP.cb1, revealed || !pIsOff, 'CB');
+  // Your own cards: always face-up. Opponent's cards: face-down until reveal.
+  renderSlotCard('.field__slot--cb1', dP.cb1, revealed || !pIsOff, 'CB1');
   renderSlotCard('.field__slot--db', dP.db, revealed || !pIsOff, 'DB');
-  renderSlotCard('.field__slot--cb2', dP.cb2, revealed || !pIsOff, 'CB');
-  renderSlotCard('.field__slot--wr1', oP.wr1, revealed || pIsOff, 'WR');
+  renderSlotCard('.field__slot--cb2', dP.cb2, revealed || !pIsOff, 'CB2');
+  renderSlotCard('.field__slot--wr1', oP.wr1, revealed || pIsOff, 'WR1');
   renderSlotCard('.field__slot--rb', oP.rb, revealed || pIsOff, 'RB');
-  renderSlotCard('.field__slot--wr2', oP.wr2, revealed || pIsOff, 'WR');
+  renderSlotCard('.field__slot--wr2', oP.wr2, revealed || pIsOff, 'WR2');
 
   $$('.rock').forEach(r => r.classList.remove('rock--visible'));
   if (state.down.rockPosition) {
