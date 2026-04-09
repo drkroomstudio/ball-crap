@@ -541,6 +541,17 @@
     }
     .tutorial-toggle input { accent-color: var(--text-gold); width: 16px; height: 16px; cursor: pointer; }
     .tutorial-toggle label { cursor: pointer; }
+
+    /* ---- Card Value Key (inline, below field) ---- */
+    .card-key {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; flex-wrap: wrap;
+      font-family: var(--font-main); font-size: 0.525rem;
+      color: var(--text-secondary); padding: 3px 0;
+    }
+    .card-key__label { color: var(--text-gold); font-weight: bold; margin-right: 2px; }
+    .card-key__item { white-space: nowrap; }
+    .card-key__val { color: var(--text-gold); }
   </style>
 </head>
 <body>
@@ -588,6 +599,7 @@
 
   <button class="restart-btn" onclick="restartGame()">Restart</button>
   <div class="copyright">© 2025 Erick Delgado Rodriguez</div>
+
   <div id="app">
     <div class="conn-status" id="connStatus"></div>
     <div class="scoreboard">
@@ -650,6 +662,15 @@
         <div class="field__slot field__slot--rb"><div class="field__slot-label">RB</div><div class="card-slot">RB</div><div class="rock">&#127944;</div></div>
         <div class="field__slot field__slot--wr2"><div class="field__slot-label">WR</div><div class="card-slot">WR</div><div class="rock">&#127944;</div></div>
       </div>
+    </div>
+
+    <div class="card-key">
+      <span class="card-key__label">Card Values:</span>
+      <span class="card-key__item">A=<span class="card-key__val">14</span></span>
+      <span class="card-key__item">K=<span class="card-key__val">13</span></span>
+      <span class="card-key__item">Q=<span class="card-key__val">12</span></span>
+      <span class="card-key__item">J=<span class="card-key__val">11</span></span>
+      <span class="card-key__item">10–2=<span class="card-key__val">face</span></span>
     </div>
 
     <div class="dice-area">
@@ -2576,7 +2597,7 @@ async function executeDown(state, offCards, defCards, myId) {
       setInstruction('Place your defense side bets on the non-rock cards');
       renderHand([], state);
       if (state.driveNumber === 2 && state.drive.downNumber === 1) {
-        await tutorialShow('.betting-panel', 'Now you\'re on <b>defense</b>! You bet first. Use the <b>+/-</b> buttons to set how much to wager on each matchup. Bet more where you think your card is stronger.', 'down');
+        await tutorialShow('.phase-instruction', 'Now you\'re on <b>defense</b>! You bet first. Use the <b>+/-</b> buttons to set how much to wager on each matchup. Bet more where you think your card is stronger.', 'up');
       }
       await waitForDefenseBet(state);
       checkAbort(myId);
@@ -2624,7 +2645,7 @@ async function executeDown(state, offCards, defCards, myId) {
         setInstruction('Respond to defense side bets');
         renderHand([], state);
         if (state.driveNumber === 1 && state.drive.downNumber === 1) {
-          await tutorialShow('.betting-panel', 'The defense placed bets. For each matchup you can: <b>Match</b> (accept the bet), <b>Raise</b> (increase the stakes), or <b>Pass</b> (fold — costs 10% of buy-in penalty).', 'down');
+          await tutorialShow('.phase-instruction', 'The defense placed bets. For each matchup you can: <b>Match</b> (accept the bet), <b>Raise</b> (increase the stakes), or <b>Pass</b> (fold — costs 10% of buy-in penalty).', 'up');
         }
         await waitForOffenseResponse(state);
         checkAbort(myId);
@@ -2697,7 +2718,7 @@ async function executeDown(state, offCards, defCards, myId) {
         setInstruction('Defense passed — place your offense bets');
         renderHand([], state);
         if (state.driveNumber === 1 && state.drive.downNumber === 1) {
-          await tutorialShow('.betting-panel', 'The defense passed on some matchups. Now <b>you</b> can bet on those positions! If you bet, the defense gets a chance to respond.', 'down');
+          await tutorialShow('.phase-instruction', 'The defense passed on some matchups. Now <b>you</b> can bet on those positions! If you bet, the defense gets a chance to respond.', 'up');
         }
         await waitForOffenseInitiateBet(state, unbetPositions);
         checkAbort(myId);
