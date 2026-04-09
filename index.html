@@ -497,6 +497,50 @@
       #app { max-width: 520px; padding: 16px; gap: 14px; }
       .scoreboard__score { font-size: 1.6rem; }
     }
+
+    /* ---- Tutorial Tooltips ---- */
+    .tutorial-overlay {
+      position: fixed; inset: 0; z-index: 9000;
+      background: rgba(0,0,0,0.55); pointer-events: auto;
+    }
+    .tutorial-tooltip {
+      position: fixed; z-index: 9001;
+      background: var(--panel-bg); border: 2px solid var(--text-gold);
+      border-radius: 4px; padding: 12px 16px;
+      max-width: 280px; box-shadow: 4px 4px 0 #000;
+      font-family: var(--font-main); font-size: 0.5rem;
+      color: var(--text-primary); line-height: 1.5;
+    }
+    .tutorial-tooltip__text { margin-bottom: 10px; }
+    .tutorial-tooltip__btns { display: flex; gap: 8px; justify-content: flex-end; }
+    .tutorial-tooltip__btn {
+      padding: 6px 14px; border-radius: 2px; font-size: 0.45rem;
+      font-weight: 600; box-shadow: 2px 2px 0 #000;
+      border: 2px solid transparent; cursor: pointer;
+    }
+    .tutorial-tooltip__btn--next { background: var(--accent-green); color: #fff; }
+    .tutorial-tooltip__btn--skip { background: var(--panel-border); color: var(--text-primary); }
+    .tutorial-tooltip__btn:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #000; }
+    .tutorial-highlight {
+      position: relative; z-index: 9002 !important;
+      box-shadow: 0 0 0 4px var(--text-gold), 0 0 16px rgba(255,215,0,0.4);
+      border-radius: 4px;
+    }
+    .tutorial-arrow {
+      position: absolute; width: 0; height: 0;
+      border: 8px solid transparent;
+    }
+    .tutorial-arrow--up { top: -16px; left: 50%; transform: translateX(-50%); border-bottom-color: var(--text-gold); }
+    .tutorial-arrow--down { bottom: -16px; left: 50%; transform: translateX(-50%); border-top-color: var(--text-gold); }
+    .tutorial-arrow--left { left: -16px; top: 50%; transform: translateY(-50%); border-right-color: var(--text-gold); }
+    .tutorial-arrow--right { right: -16px; top: 50%; transform: translateY(-50%); border-left-color: var(--text-gold); }
+    .tutorial-toggle {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 18px; justify-content: center;
+      font-family: var(--font-main); font-size: 0.4rem; color: var(--text-secondary);
+    }
+    .tutorial-toggle input { accent-color: var(--text-gold); width: 16px; height: 16px; cursor: pointer; }
+    .tutorial-toggle label { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -509,6 +553,10 @@
         <button class="mode-select__btn mode-select__btn--ai" onclick="selectMode('ai')">Play vs AI</button>
         <button class="mode-select__btn mode-select__btn--online" onclick="selectMode('online')">Create Game</button>
         <button class="mode-select__btn mode-select__btn--online" onclick="selectJoin()">Join Game</button>
+      </div>
+      <div class="tutorial-toggle">
+        <input type="checkbox" id="tutorialSkip">
+        <label for="tutorialSkip">I've played before (skip tips)</label>
       </div>
       <div class="lobby" id="lobby">
         <div class="lobby__section" id="lobbyConfig">
@@ -665,6 +713,7 @@ function generateRoomCode() {
 function selectMode(mode) {
   if (mode === 'ai') {
     gameMode = 'ai';
+    tutorialInit();
     hideModeSelect();
     startGame();
   } else {
@@ -2447,11 +2496,18 @@ async function executeDown(state, offCards, defCards, myId) {
     state.down.offensePlacements={wr1:null,rb:null,wr2:null};
     renderField(state);
     renderHand(offCards, state);
+    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+      await tutorialShow('.hand', 'These are your <b>cards</b>. Higher values are stronger. Tap a card to select it, then tap a field position to place it.', 'down');
+      await tutorialShow('.field', 'This is the <b>field</b>. Place cards on <b>WR1</b>, <b>RB</b>, and <b>WR2</b>. Each offense position is matched against a defender: WR1 vs CB1, RB vs DB, WR2 vs CB2.', 'down');
+    }
     await waitForPlacement(state, offCards);
     checkAbort(myId);
 
     state.phase='PLACE_ROCK';
     setInstruction('Place the rock: tap RB (Run) or a WR (Pass)');
+    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+      await tutorialShow('.field', 'Now pick <b>the rock</b> — the position that decides the play. Tap <b>RB</b> for a Run (pure card strength) or a <b>WR</b> for a Pass (card + dice roll). The rock matchup determines yards gained or lost!', 'down');
+    }
     await waitForRock(state);
     checkAbort(myId);
 
@@ -2479,6 +2535,9 @@ async function executeDown(state, offCards, defCards, myId) {
     state.down.defensePlacements={cb1:null,db:null,cb2:null};
     renderField(state);
     renderHand(defCards, state);
+    if (state.driveNumber === 2 && state.drive.downNumber === 1) {
+      await tutorialShow('.hand', 'Now you\'re on <b>defense</b>! Place your cards on <b>CB1</b>, <b>DB</b>, and <b>CB2</b> to counter the offense. Try to match strong cards against the positions you think the opponent will target.', 'down');
+    }
     await waitForPlacement(state, defCards);
     checkAbort(myId);
   }
@@ -2499,6 +2558,9 @@ async function executeDown(state, offCards, defCards, myId) {
     // ---- ROUND 1: Defense bets first ----
     state.phase = 'DEFENSE_BET';
     renderField(state);
+    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+      await tutorialShow('.field', 'Time for <b>side bets</b>! On each non-rock matchup, both sides can wager credits. The winner of each card matchup wins the bet. Defense bets first, then offense responds.', 'down');
+    }
     if (defSide === 'ai' && !isOnline()) {
       setInstruction('AI defense is placing side bets...');
       await sleep(600);
@@ -2513,6 +2575,9 @@ async function executeDown(state, offCards, defCards, myId) {
     } else if (localIsDef) {
       setInstruction('Place your defense side bets on the non-rock cards');
       renderHand([], state);
+      if (state.driveNumber === 2 && state.drive.downNumber === 1) {
+        await tutorialShow('.betting-panel', 'Now you\'re on <b>defense</b>! You bet first. Use the <b>+/-</b> buttons to set how much to wager on each matchup. Bet more where you think your card is stronger.', 'down');
+      }
       await waitForDefenseBet(state);
       checkAbort(myId);
       renderField(state);
@@ -2558,6 +2623,9 @@ async function executeDown(state, offCards, defCards, myId) {
       } else if (localIsOff) {
         setInstruction('Respond to defense side bets');
         renderHand([], state);
+        if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+          await tutorialShow('.betting-panel', 'The defense placed bets. For each matchup you can: <b>Match</b> (accept the bet), <b>Raise</b> (increase the stakes), or <b>Pass</b> (fold — costs 10% of buy-in penalty).', 'down');
+        }
         await waitForOffenseResponse(state);
         checkAbort(myId);
         renderField(state);
@@ -2628,6 +2696,9 @@ async function executeDown(state, offCards, defCards, myId) {
       } else if (localIsOff) {
         setInstruction('Defense passed — place your offense bets');
         renderHand([], state);
+        if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+          await tutorialShow('.betting-panel', 'The defense passed on some matchups. Now <b>you</b> can bet on those positions! If you bet, the defense gets a chance to respond.', 'down');
+        }
         await waitForOffenseInitiateBet(state, unbetPositions);
         checkAbort(myId);
         renderField(state);
@@ -2728,6 +2799,9 @@ async function executeDown(state, offCards, defCards, myId) {
   renderField(state);
   await revealAllCards();
   checkAbort(myId);
+  if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+    await tutorialShow('.field', 'All cards are revealed! The <b>rock position</b> determines the play. The offense card faces the matched defender — highest value wins.', 'down');
+  }
 
   const isPass = state.down.rockPosition==='wr1'||state.down.rockPosition==='wr2';
   let oD=null, dD=null;
@@ -2751,6 +2825,9 @@ async function executeDown(state, offCards, defCards, myId) {
     state.down.offenseDice=oD; state.down.defenseDice=dD;
     await renderDiceRoll(oD, dD);
     checkAbort(myId);
+    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+      await tutorialShow('.dice-area', 'This is a <b>pass play</b>, so both sides roll 2 dice. The dice totals are added to the card values — more risk, more reward!', 'up');
+    }
   }
 
   state.phase='RESOLVE_DOWN';
@@ -2760,12 +2837,18 @@ async function executeDown(state, offCards, defCards, myId) {
   const sign=result.yards>=0?'+':'';
   const type=result.yards>0?'positive':result.yards<0?'negative':'neutral';
   showResult(`${sign}${result.yards} yards | ${result.breakdown}`, type);
+  if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+    await tutorialShow('.result-display', 'Here\'s the result! <b>Positive yards</b> = offense advances. <b>Negative yards</b> = defense pushes back. Get 10 yards in 3 downs for a first down, or reach the end zone to score a touchdown!', 'up');
+  }
 
   // Resolve side bets after down result
   if (canBet) {
     resolveBets(state);
     persistentWallets = { player: state.wallets.player, ai: state.wallets.ai };
     renderWallets(state);
+    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+      await tutorialShow('.wallet-bar', 'Side bets are settled! Check your <b>credits</b> — winners collect, losers pay. The pot stays until the football game ends.', 'up');
+    }
     await showBetResults(state);
     checkAbort(myId);
   }
@@ -3050,12 +3133,16 @@ async function startGame() {
       const contMsg = persistentWallets ? ` (You: $${persistentWallets.player} | ${oppLabel}: $${persistentWallets.ai})` : '';
       setInstruction('Set your bets!' + contMsg);
       setActionBtn('Set your bets!', false, null);
+      await tutorialShow('.config-bar', 'Set your <b>buy-in</b> (ante per game) and <b>starting balance</b>. Both players put the buy-in into the pot. The football winner takes the pot!', 'up');
       await waitForConfig();
       checkAbort(myId);
     }
 
+    await tutorialShow('.wallet-bar', 'This is the <b>wallet bar</b>. Your credits are on the left, the pot in the middle, and the opponent\'s credits on the right. Side bets come from your credits.', 'up');
     await showMessage('Ball Crap',`Football meets Craps! Buy-in: $${state.buyIn}. Pot: $${state.pot}. Winner takes all!`,'Let\'s Go!');
     checkAbort(myId);
+    await tutorialShow('.scoreboard', 'The <b>scoreboard</b> tracks points. Touchdowns are worth 7, field goals 3. Two drives each — you play offense first, then defense.', 'up');
+    await tutorialShow('.game-info', 'This shows the current <b>drive</b>, <b>down</b>, and <b>yard line</b>. Get 10 yards in 3 downs for a first down. Reach the end zone to score!', 'up');
 
     // Always 'player' first offense, 'ai' second — in online mode host='player', guest='ai'
     state.driveNumber = 1;
@@ -3114,11 +3201,106 @@ async function startGame() {
   }
 }
 
+// ============================================================
+// TUTORIAL ENGINE
+// ============================================================
+let tutorialActive = false;
+let tutorialStepResolve = null;
+
+function tutorialInit() {
+  const skip = localStorage.getItem('ballCrap_skipTutorial') === 'true';
+  $('#tutorialSkip').checked = skip;
+  tutorialActive = !skip;
+}
+
+function tutorialIsActive() { return tutorialActive; }
+
+function tutorialSkipAll() {
+  tutorialActive = false;
+  tutorialDismiss();
+}
+
+function tutorialDismiss() {
+  const overlay = $('#tutorialOverlay');
+  const tooltip = $('#tutorialTooltip');
+  if (overlay) overlay.style.display = 'none';
+  if (tooltip) tooltip.style.display = 'none';
+  $$('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+  if (tutorialStepResolve) { tutorialStepResolve(); tutorialStepResolve = null; }
+}
+
+function tutorialShow(targetSel, text, arrowDir) {
+  if (!tutorialActive) return Promise.resolve();
+  return new Promise(resolve => {
+    tutorialStepResolve = resolve;
+    const overlay = $('#tutorialOverlay');
+    const tooltip = $('#tutorialTooltip');
+    const textEl = $('.tutorial-tooltip__text', tooltip);
+    const arrow = $('.tutorial-arrow', tooltip);
+
+    // Reset
+    overlay.style.display = 'block';
+    tooltip.style.display = 'block';
+    arrow.className = 'tutorial-arrow';
+    textEl.innerHTML = text;
+
+    // Highlight target
+    $$('.tutorial-highlight').forEach(e => e.classList.remove('tutorial-highlight'));
+    const target = targetSel ? $(targetSel) : null;
+    if (target) target.classList.add('tutorial-highlight');
+
+    // Position tooltip near target
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      const dir = arrowDir || 'up';
+      arrow.classList.add('tutorial-arrow--' + dir);
+
+      if (dir === 'up') {
+        tooltip.style.top = (rect.bottom + 12) + 'px';
+        tooltip.style.left = Math.max(8, Math.min(window.innerWidth - 290, rect.left + rect.width / 2 - 140)) + 'px';
+      } else if (dir === 'down') {
+        tooltip.style.top = (rect.top - tooltip.offsetHeight - 12) + 'px';
+        tooltip.style.left = Math.max(8, Math.min(window.innerWidth - 290, rect.left + rect.width / 2 - 140)) + 'px';
+      } else if (dir === 'left') {
+        tooltip.style.top = (rect.top + rect.height / 2 - 40) + 'px';
+        tooltip.style.left = (rect.right + 12) + 'px';
+      } else {
+        tooltip.style.top = (rect.top + rect.height / 2 - 40) + 'px';
+        tooltip.style.left = (rect.left - tooltip.offsetWidth - 12) + 'px';
+      }
+    } else {
+      // Center on screen
+      tooltip.style.top = '50%';
+      tooltip.style.left = '50%';
+      tooltip.style.transform = 'translate(-50%, -50%)';
+      arrow.style.display = 'none';
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   window.DEBUG_STATE = () => state;
-  // Show mode selection screen instead of auto-starting
+
+  // Tutorial toggle — persist preference
+  const skipCb = $('#tutorialSkip');
+  skipCb.checked = localStorage.getItem('ballCrap_skipTutorial') === 'true';
+  skipCb.addEventListener('change', () => {
+    localStorage.setItem('ballCrap_skipTutorial', skipCb.checked ? 'true' : 'false');
+  });
+
   showModeSelect();
 });
 </script>
+
+<!-- Tutorial tooltip container -->
+<div id="tutorialOverlay" class="tutorial-overlay" style="display:none"></div>
+<div id="tutorialTooltip" class="tutorial-tooltip" style="display:none">
+  <div class="tutorial-arrow"></div>
+  <div class="tutorial-tooltip__text"></div>
+  <div class="tutorial-tooltip__btns">
+    <button class="tutorial-tooltip__btn tutorial-tooltip__btn--skip" onclick="tutorialSkipAll()">Skip All</button>
+    <button class="tutorial-tooltip__btn tutorial-tooltip__btn--next" onclick="tutorialDismiss()">Got It</button>
+  </div>
+</div>
 </body>
 </html>
