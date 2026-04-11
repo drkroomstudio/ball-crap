@@ -607,12 +607,12 @@
     <div class="conn-status" id="connStatus"></div>
     <div class="scoreboard">
       <div class="scoreboard__team">
-        <div class="scoreboard__label">You</div>
+        <div class="scoreboard__label">Player 1</div>
         <div class="scoreboard__score scoreboard__score--player">0</div>
       </div>
       <div class="scoreboard__divider"></div>
       <div class="scoreboard__team">
-        <div class="scoreboard__label">AI</div>
+        <div class="scoreboard__label">Player 2</div>
         <div class="scoreboard__score scoreboard__score--ai">0</div>
       </div>
     </div>
@@ -625,7 +625,7 @@
 
     <div class="wallet-bar">
       <div class="wallet wallet--player">
-        <div class="wallet__label">Your Credits</div>
+        <div class="wallet__label">Offense Credits</div>
         <div class="wallet__amount wallet__amount--player">100</div>
       </div>
       <div class="wallet__pot">
@@ -633,7 +633,7 @@
         <div class="wallet__amount wallet__amount--pot">20</div>
       </div>
       <div class="wallet wallet--ai">
-        <div class="wallet__label">AI Credits</div>
+        <div class="wallet__label">Defense Credits</div>
         <div class="wallet__amount wallet__amount--ai">100</div>
       </div>
     </div>
@@ -961,8 +961,8 @@ function isLocalSide(side) {
 
 // Display label for a side
 function sideLabel(side) {
-  if (!isOnline()) return side === 'player' ? 'You' : 'AI';
-  return isLocalSide(side) ? 'You' : 'Opponent';
+  if (!isOnline()) return side === 'player' ? 'Player 1' : 'Player 2';
+  return isLocalSide(side) ? 'Player 1' : 'Player 2';
 }
 
 // ============================================================
@@ -1090,6 +1090,13 @@ function renderWallets(state) {
   $('.wallet__amount--player').textContent = '$' + state.wallets.player;
   $('.wallet__amount--ai').textContent = '$' + state.wallets.ai;
   $('.wallet__amount--pot').textContent = '$' + state.pot;
+  // Offense/Defense labels swap based on who is on offense this drive
+  const offSide = state && state.drive && state.drive.offenseSide;
+  if (offSide) {
+    const playerIsOff = offSide === 'player';
+    $('.wallet--player .wallet__label').textContent = playerIsOff ? 'Offense Credits' : 'Defense Credits';
+    $('.wallet--ai .wallet__label').textContent = playerIsOff ? 'Defense Credits' : 'Offense Credits';
+  }
 }
 
 function readConfigToState(state) {
@@ -2044,7 +2051,7 @@ function renderGameInfo(state) {
   const downText = isGoal
     ? `${ordinal(d.downNumber)} & Goal`
     : `${ordinal(d.downNumber)} & ${yardsLeft}`;
-  const driveLabel = isLocalSide(d.offenseSide) ? 'Your Offense' : `${sideLabel(d.offenseSide)} Offense`;
+  const driveLabel = `${sideLabel(d.offenseSide)} Offense`;
   $('.game-info__drive .game-info__value').textContent = driveLabel;
   $('.game-info__down .game-info__value').textContent = downText;
   $('.game-info__yard .game-info__value').textContent = `${d.yardLine} yd`;
@@ -3315,10 +3322,8 @@ async function startGame() {
   const myId = gameId;
   state = createState();
   state.deck = shuffleDeck(createDeck());
-  // Update labels for game mode
-  const oppLabel = gameMode === 'online' ? 'Opponent' : 'AI';
-  $$('.scoreboard__label')[1].textContent = oppLabel;
-  $('.wallet--ai .wallet__label').textContent = oppLabel + ' Credits';
+  // Scoreboard labels are static "Player 1" / "Player 2"; wallet labels swap via renderWallets based on offense side
+  const oppLabel = 'Player 2';
   renderScoreboard(state);
   renderGameInfo(state);
   hideResult(); hideDiceArea(); hideBettingPanel();
