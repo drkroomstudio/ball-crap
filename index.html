@@ -486,7 +486,10 @@
       z-index: 5; white-space: nowrap; line-height: 1.3;
     }
     .bet-badge--raise { background: var(--accent-orange); color: #fff; }
-    .bet-badge--pass { background: var(--accent-red); color: #fff; opacity: 0.7; }
+    .bet-badge--pass { background: var(--accent-red); color: #fff; opacity: 0.85; }
+    .bet-badge--locked { background: #4a90e2; color: #fff; }
+    .field__slot--folded .card { opacity: 0.35; filter: grayscale(0.7); }
+    .field__slot--locked .card { box-shadow: 0 0 0 2px #4a90e2 inset; }
     .bet-result-text { font-size: 0.55rem; font-weight: bold; margin-top: 4px; text-align: center; }
     .bet-result-text--win { color: var(--accent-green); }
     .bet-result-text--loss { color: var(--accent-red); }
@@ -1886,88 +1889,58 @@ function resolveCardComparison(state, pos, stake, results) {
   }
 }
 
+// v2 resolveBets — all 3 positions, fold forfeits commitment, matched stake by card compare
 function resolveBets(state) {
   const results = {};
   const offSide = state.drive.offenseSide;
   const defSide = getDefenseSide(state);
-  const passPenalty = Math.max(1, Math.ceil(state.buyIn * 0.1));
+  const b = state.bets;
 
-  for (const pos of state.bets.positions) {
-    const defBet = state.bets.defenseBets[pos] || 0;
-    const offBet = state.bets.offenseBets[pos] || 0;
+  for (const pos of b.positions) {
+    const offAmt = b.offense[pos] || 0;
+    const defAmt = b.defense[pos] || 0;
 
-    // ---- CASE A: Defense initiated a bet ----
-    if (defBet > 0) {
-      const offResp = state.bets.offenseResponses[pos];
-
-      if (offResp === 'pass') {
-        const fee = Math.min(passPenalty, state.wallets[offSide]);
-        state.wallets[offSide] -= fee;
-        state.wallets[defSide] += fee;
-        results[pos] = { winner: defSide, amount: fee, desc: `Offense passed (penalty $${fee})` };
-        continue;
-      }
-
-      if (offResp === 'match') {
-        resolveCardComparison(state, pos, defBet, results);
-        continue;
-      }
-
-      if (offResp === 'raise') {
-        const raiseAmt = state.bets.raiseAmounts[pos];
-        if (state.bets.defenseMatched[pos]) {
-          resolveCardComparison(state, pos, raiseAmt, results);
-        } else {
-          const fee = Math.min(passPenalty, state.wallets[defSide]);
-          state.wallets[defSide] -= fee;
-          state.wallets[offSide] += fee;
-          results[pos] = { winner: offSide, amount: fee, desc: `Defense folded (penalty $${fee})` };
-        }
-        continue;
-      }
-
-      results[pos] = { winner: null, amount: 0, desc: 'No action' };
+    if (b.folded[pos] === 'offense') {
+      const pay = Math.min(offAmt, Math.max(0, state.wallets[offSide]));
+      state.wallets[offSide] -= pay;
+      state.wallets[defSide] += pay;
+      results[pos] = { winner: defSide, amount: pay, desc: `Offense folded — forfeits $${pay}` };
+      continue;
+    }
+    if (b.folded[pos] === 'defense') {
+      const pay = Math.min(defAmt, Math.max(0, state.wallets[defSide]));
+      state.wallets[defSide] -= pay;
+      state.wallets[offSide] += pay;
+      results[pos] = { winner: offSide, amount: pay, desc: `Defense folded — forfeits $${pay}` };
       continue;
     }
 
-    // ---- CASE B: Offense initiated a bet (defense passed initially) ----
-    if (offBet > 0) {
-      const defResp = state.bets.offInitDefResponses[pos];
-
-      if (!defResp || defResp === 'pass') {
-        const fee = Math.min(passPenalty, state.wallets[defSide]);
-        state.wallets[defSide] -= fee;
-        state.wallets[offSide] += fee;
-        results[pos] = { winner: offSide, amount: fee, desc: `Defense passed (penalty $${fee})` };
-        continue;
-      }
-
-      if (defResp === 'match') {
-        resolveCardComparison(state, pos, offBet, results);
-        continue;
-      }
-
-      if (defResp === 'raise') {
-        const raiseAmt = state.bets.offInitDefRaises[pos];
-        if (state.bets.offInitOffMatched && state.bets.offInitOffMatched[pos]) {
-          resolveCardComparison(state, pos, raiseAmt, results);
-        } else {
-          const fee = Math.min(passPenalty, state.wallets[offSide]);
-          state.wallets[offSide] -= fee;
-          state.wallets[defSide] += fee;
-          results[pos] = { winner: defSide, amount: fee, desc: `Offense folded (penalty $${fee})` };
-        }
-        continue;
-      }
-
-      results[pos] = { winner: null, amount: 0, desc: 'No action' };
+    const stake = Math.min(offAmt, defAmt);
+    const offCard = state.down.offensePlacements[pos];
+    const defCard = state.down.defensePlacements[MATCHUPS[pos]];
+    if (!offCard || !defCard) {
+      results[pos] = { winner: null, amount: 0, desc: 'No cards' };
       continue;
     }
 
-    // ---- CASE C: Nobody bet ----
-    results[pos] = { winner: null, amount: 0, desc: 'No bets' };
+    if (offCard.value > defCard.value) {
+      const pay = Math.min(stake, Math.max(0, state.wallets[defSide]));
+      state.wallets[offSide] += pay;
+      state.wallets[defSide] -= pay;
+      results[pos] = { winner: offSide, amount: pay, desc: `${offCard.rank} beats ${defCard.rank}` };
+    } else if (defCard.value > offCard.value) {
+      const pay = Math.min(stake, Math.max(0, state.wallets[offSide]));
+      state.wallets[defSide] += pay;
+      state.wallets[offSide] -= pay;
+      results[pos] = { winner: defSide, amount: pay, desc: `${defCard.rank} beats ${offCard.rank}` };
+    } else {
+      results[pos] = { winner: 'tie', amount: 0, desc: `${offCard.rank} ties ${defCard.rank} — push` };
+    }
   }
-  state.bets.results = results;
+  // Final safety clamp — should never be needed but guarantees no negatives
+  if (state.wallets.player < 0) state.wallets.player = 0;
+  if (state.wallets.ai < 0) state.wallets.ai = 0;
+  b.results = results;
 }
 
 function showBetResults(state) {
@@ -2119,48 +2092,46 @@ function renderField(state) {
     if (rk) rk.classList.add('rock--visible');
   }
 
-  // Bet badges on non-rock positions
+  // v2 bet badges: show each side's committed amount on each position
   $$('.bet-badge').forEach(b => b.remove());
-  if (state.bets.positions.length > 0) {
-    for (const pos of state.bets.positions) {
-      const defBet = state.bets.defenseBets[pos] || 0;
-      const offBet = state.bets.offenseBets[pos] || 0;
+  $$('.field__slot--folded').forEach(s => s.classList.remove('field__slot--folded'));
+  $$('.field__slot--locked').forEach(s => s.classList.remove('field__slot--locked'));
+  const b = state.bets;
+  if (b && b.positions && b.positions.length > 0) {
+    for (const pos of b.positions) {
+      const offAmt = b.offense[pos] || 0;
+      const defAmt = b.defense[pos] || 0;
       const defPos = MATCHUPS[pos];
 
-      if (defBet > 0) {
-        // Defense-initiated bet badges
-        const offResp = state.bets.offenseResponses[pos];
+      if (offAmt > 0) {
         const offSlot = $(`.field__slot--${pos}`);
         if (offSlot) {
           const badge = el('div','bet-badge');
-          if (offResp === 'pass') { badge.classList.add('bet-badge--pass'); badge.textContent = 'Pass'; }
-          else if (offResp === 'raise') { badge.classList.add('bet-badge--raise'); badge.textContent = '$' + (state.bets.raiseAmounts[pos] || defBet); }
-          else { badge.textContent = '$' + defBet; }
+          if (b.folded[pos] === 'offense') {
+            badge.classList.add('bet-badge--pass'); badge.textContent = 'Fold';
+            offSlot.classList.add('field__slot--folded');
+          } else if (b.offStay[pos]) {
+            badge.classList.add('bet-badge--locked'); badge.textContent = '$' + offAmt + ' \u2713';
+            offSlot.classList.add('field__slot--locked');
+          } else {
+            badge.textContent = '$' + offAmt;
+          }
           offSlot.appendChild(badge);
         }
+      }
+      if (defAmt > 0) {
         const defSlot = $(`.field__slot--${defPos}`);
         if (defSlot) {
           const dbadge = el('div','bet-badge');
-          if (offResp === 'raise' && state.bets.defenseMatched[pos] === false) { dbadge.classList.add('bet-badge--pass'); dbadge.textContent = 'Fold'; }
-          else { dbadge.textContent = '$' + defBet; }
-          defSlot.appendChild(dbadge);
-        }
-      } else if (offBet > 0) {
-        // Offense-initiated bet badges
-        const defResp = state.bets.offInitDefResponses[pos];
-        const offSlot = $(`.field__slot--${pos}`);
-        if (offSlot) {
-          const badge = el('div','bet-badge');
-          badge.textContent = '$' + offBet;
-          offSlot.appendChild(badge);
-        }
-        const defSlot = $(`.field__slot--${defPos}`);
-        if (defSlot) {
-          const dbadge = el('div','bet-badge');
-          if (defResp === 'pass') { dbadge.classList.add('bet-badge--pass'); dbadge.textContent = 'Pass'; }
-          else if (defResp === 'raise') { dbadge.classList.add('bet-badge--raise'); dbadge.textContent = '$' + (state.bets.offInitDefRaises[pos] || offBet); }
-          else if (defResp === 'match') { dbadge.textContent = '$' + offBet; }
-          else { dbadge.textContent = '$' + offBet; }
+          if (b.folded[pos] === 'defense') {
+            dbadge.classList.add('bet-badge--pass'); dbadge.textContent = 'Fold';
+            defSlot.classList.add('field__slot--folded');
+          } else if (b.defStay[pos]) {
+            dbadge.classList.add('bet-badge--locked'); dbadge.textContent = '$' + defAmt + ' \u2713';
+            defSlot.classList.add('field__slot--locked');
+          } else {
+            dbadge.textContent = '$' + defAmt;
+          }
           defSlot.appendChild(dbadge);
         }
       }
@@ -2425,7 +2396,26 @@ function createState() {
     buyIn:10,
     startingBalance:100,
     pot:0,
-    bets:{ positions:[], defenseBets:{}, offenseResponses:{}, raiseAmounts:{}, defenseMatched:{}, results:{} },
+    bets: makeBetsState(),
+  };
+}
+
+function makeBetsState() {
+  return {
+    positions: ['wr1','rb','wr2'],
+    minBet: 1,
+    // Committed amounts per side, per position (grows via raise/match)
+    offense: { wr1:0, rb:0, wr2:0 },
+    defense: { wr1:0, rb:0, wr2:0 },
+    // "Stay" flag per side: once set, that side won't raise further this position
+    offStay: { wr1:false, rb:false, wr2:false },
+    defStay: { wr1:false, rb:false, wr2:false },
+    // Fold records: null | 'offense' | 'defense'
+    folded: { wr1:null, rb:null, wr2:null },
+    // Track raise counts to enforce hard cap (safety)
+    raiseCount: { wr1:0, rb:0, wr2:0 },
+    maxRaises: 6,
+    results: {},
   };
 }
 
@@ -2438,7 +2428,7 @@ function resetDown(s) {
   s.down.offensePlacements={wr1:null,rb:null,wr2:null};
   s.down.defensePlacements={cb1:null,db:null,cb2:null};
   s.down.rockPosition=null; s.down.offenseDice=null; s.down.defenseDice=null; s.down.result=null;
-  s.bets={ positions:[], defenseBets:{}, offenseResponses:{}, raiseAmounts:{}, defenseMatched:{}, offenseBets:{}, offInitDefResponses:{}, offInitDefRaises:{}, offInitOffMatched:{}, results:{} };
+  s.bets = makeBetsState();
 }
 
 function ensureDeck(s, n) {
@@ -2448,431 +2438,629 @@ function ensureDeck(s, n) {
   }
 }
 
+// ============================================================
+// v2 AI — card-strength based logic
+// ============================================================
+function _v2MaxBet(state) { return state.buyIn * 2; }
+function _v2Step(state) { return Math.max(1, Math.floor(state.buyIn / 5)); }
+
+// Offense sets initial bets: scale from min to max by card strength
+function aiOffenseInitialBetsV2(state) {
+  const b = state.bets;
+  const side = state.drive.offenseSide;
+  const wallet = state.wallets[side];
+  const maxBet = _v2MaxBet(state);
+  let spent = 0;
+  b.positions.forEach(p => {
+    const card = state.down.offensePlacements[p];
+    const str = card ? getCardStrength(card.value) : 0;
+    let amt = Math.round(b.minBet + (maxBet - b.minBet) * str);
+    amt = Math.max(b.minBet, Math.min(maxBet, amt));
+    amt = Math.min(amt, Math.max(b.minBet, wallet - spent));
+    b.offense[p] = amt;
+    b.offStay[p] = true; // initial bet locks offense side
+    spent += amt;
+  });
+}
+
+// Defense response: evaluate own card vs offense bet, decide per position
+function aiDefenseRespondV2(state) {
+  const b = state.bets;
+  const defSide = getDefenseSide(state);
+  const wallet = state.wallets[defSide];
+  const maxBet = _v2MaxBet(state);
+  let spent = 0;
+  b.positions.forEach(p => {
+    const offCard = state.down.offensePlacements[p];
+    const defCard = state.down.defensePlacements[MATCHUPS[p]];
+    const defStr = defCard ? getCardStrength(defCard.value) : 0;
+    const offAmt = b.offense[p] || b.minBet;
+    const budget = Math.max(0, wallet - spent);
+
+    if (defStr < 0.25 && offAmt > b.minBet) {
+      // Weak card + real bet → fold (keep min ante at risk only)
+      b.defense[p] = b.minBet;
+      b.folded[p] = 'defense';
+      spent += b.minBet;
+      return;
+    }
+    if (defStr > 0.7 && budget >= offAmt * 2) {
+      // Strong → raise
+      const raise = Math.min(maxBet, offAmt * 2, budget);
+      b.defense[p] = raise;
+      spent += raise;
+      return;
+    }
+    // Otherwise match and stay
+    const matched = Math.min(offAmt, budget);
+    b.defense[p] = matched;
+    b.defStay[p] = true;
+    b.offStay[p] = true; // if def matches and stays, and off hasn't raised back, lock
+    spent += matched;
+  });
+}
+
+function aiOffenseCounterV2(state, positions) {
+  const b = state.bets;
+  const offSide = state.drive.offenseSide;
+  const wallet = state.wallets[offSide];
+  const maxBet = _v2MaxBet(state);
+  let spent = 0;
+  b.positions.forEach(p => { spent += b.offense[p] || 0; });
+  positions.forEach(p => {
+    const card = state.down.offensePlacements[p];
+    const str = card ? getCardStrength(card.value) : 0;
+    const defAmt = b.defense[p];
+    const diff = defAmt - b.offense[p];
+    const budget = Math.max(0, wallet - spent);
+
+    if (budget < diff) {
+      // Can't afford match → fold
+      b.folded[p] = 'offense';
+      return;
+    }
+    if (str < 0.3) {
+      // Weak → fold
+      b.folded[p] = 'offense';
+      return;
+    }
+    if (str > 0.75 && budget >= diff * 2 && b.raiseCount[p] < b.maxRaises) {
+      const raise = Math.min(maxBet, defAmt * 2, wallet - spent + b.offense[p]);
+      spent += raise - b.offense[p];
+      b.offense[p] = raise;
+      b.raiseCount[p]++;
+      return;
+    }
+    // Match and stay
+    spent += diff;
+    b.offense[p] = defAmt;
+    b.offStay[p] = true;
+  });
+}
+
+function aiDefenseCounterV2(state, positions) {
+  const b = state.bets;
+  const defSide = getDefenseSide(state);
+  const wallet = state.wallets[defSide];
+  const maxBet = _v2MaxBet(state);
+  let spent = 0;
+  b.positions.forEach(p => { spent += b.defense[p] || 0; });
+  positions.forEach(p => {
+    const card = state.down.defensePlacements[MATCHUPS[p]];
+    const str = card ? getCardStrength(card.value) : 0;
+    const offAmt = b.offense[p];
+    const diff = offAmt - b.defense[p];
+    const budget = Math.max(0, wallet - spent);
+
+    if (budget < diff) { b.folded[p] = 'defense'; return; }
+    if (str < 0.3) { b.folded[p] = 'defense'; return; }
+    if (str > 0.75 && budget >= diff * 2 && b.raiseCount[p] < b.maxRaises) {
+      const raise = Math.min(maxBet, offAmt * 2, wallet - spent + b.defense[p]);
+      spent += raise - b.defense[p];
+      b.defense[p] = raise;
+      b.raiseCount[p]++;
+      return;
+    }
+    spent += diff;
+    b.defense[p] = offAmt;
+    b.defStay[p] = true;
+  });
+}
+
+// ============================================================
+// v2 PLAYER BETTING PANELS
+// ============================================================
+
+// Mini helper: render a face-down matchup card area (both sides hidden during betting)
+function _v2CardArea(state, pos) {
+  const cardArea = el('div','bet-position__card-area');
+  const pIsOff = isLocalSide(state.drive.offenseSide);
+  const defPos = MATCHUPS[pos];
+  const defCard = state.down.defensePlacements[defPos];
+  const offCard = state.down.offensePlacements[pos];
+  const offLbl = posLabel(pos);
+  const defLbl = posLabel(defPos);
+  if (pIsOff) {
+    if (offCard) cardArea.appendChild(createMiniCard(offCard, true, offLbl));
+    cardArea.appendChild(el('span','bet-position__vs','vs'));
+    if (defCard) cardArea.appendChild(createMiniCard(defCard, true, defLbl));
+    else cardArea.appendChild(el('span','bet-position__label','?'));
+  } else {
+    if (defCard) cardArea.appendChild(createMiniCard(defCard, true, defLbl));
+    else cardArea.appendChild(el('span','bet-position__label','?'));
+    cardArea.appendChild(el('span','bet-position__vs','vs'));
+    if (offCard) cardArea.appendChild(createMiniCard(offCard, true, offLbl));
+  }
+  return cardArea;
+}
+
+// Phase 3: Offense sets initial bets on all 3 positions
+function waitForOffenseInitialBetsV2(state) {
+  return new Promise(resolve => {
+    const b = state.bets;
+    const side = state.drive.offenseSide;
+    const wallet = state.wallets[side];
+    const maxBet = _v2MaxBet(state);
+    const step = _v2Step(state);
+    // Init at min ante (but cap if wallet can't afford 3x min)
+    const minAffordable = Math.max(0, Math.floor(wallet / b.positions.length));
+    const startAmt = Math.min(b.minBet, minAffordable);
+    b.positions.forEach(p => { if ((b.offense[p] || 0) < startAmt) b.offense[p] = startAmt; });
+
+    showBettingPanel();
+    const container = $('.betting-panel__positions');
+    $('.betting-panel__title').textContent = 'Place Your Offense Bets';
+
+    function render() {
+      container.innerHTML = '';
+      let total = 0;
+      b.positions.forEach(p => total += b.offense[p]);
+      const remaining = wallet - total;
+
+      b.positions.forEach(pos => {
+        const row = el('div','bet-position');
+        row.appendChild(el('div','bet-position__label', betPosLabel(pos, state)));
+        row.appendChild(_v2CardArea(state, pos));
+
+        const controls = el('div','bet-controls');
+        const minusBtn = el('button','bet-controls__btn','-');
+        const amountEl = el('div','bet-controls__amount','$' + b.offense[pos]);
+        const plusBtn = el('button','bet-controls__btn','+');
+        minusBtn.addEventListener('click', () => {
+          b.offense[pos] = Math.max(b.minBet, b.offense[pos] - step);
+          render();
+        });
+        plusBtn.addEventListener('click', () => {
+          const avail = remaining + b.offense[pos];
+          b.offense[pos] = Math.min(maxBet, avail, b.offense[pos] + step);
+          render();
+        });
+        controls.appendChild(minusBtn);
+        controls.appendChild(amountEl);
+        controls.appendChild(plusBtn);
+        row.appendChild(controls);
+        container.appendChild(row);
+      });
+
+      const info = el('div','bet-position__label',
+        `Total: $${total} | Remaining: $${remaining} | Min $${b.minBet} · Max $${maxBet}`);
+      info.style.cssText = 'flex:1;color:var(--text-secondary);font-size:0.6rem;';
+      container.appendChild(info);
+
+      setActionBtn('Confirm Offense Bets', true, () => {
+        // Initial bets lock offense side (they've set their stake); defense reacts next.
+        b.positions.forEach(p => { b.offStay[p] = true; });
+        hideBettingPanel();
+        resolve();
+      });
+    }
+    render();
+  });
+}
+
+// Generic responder panel: shown to the side that's reacting to opponent's bets.
+// `actorSide` is the side this panel is for ('offense' or 'defense').
+// `positions` = subset to act on (all 3 for first response, raised-only for counters).
+function _v2RespondPanel(state, actorSide, positions, title) {
+  return new Promise(resolve => {
+    const b = state.bets;
+    const isOffActor = actorSide === 'offense';
+    const walletSide = isOffActor ? state.drive.offenseSide : getDefenseSide(state);
+    const wallet = state.wallets[walletSide];
+    const maxBet = _v2MaxBet(state);
+    const step = _v2Step(state);
+
+    // Per-position action: 'match' | 'raise' | 'stay' | 'fold' | null (undecided)
+    const action = {};
+    const raiseAmt = {};
+    positions.forEach(p => { action[p] = null; raiseAmt[p] = 0; });
+
+    showBettingPanel();
+    const container = $('.betting-panel__positions');
+    $('.betting-panel__title').textContent = title;
+    // Helper hint row showing action legend
+    const legend = el('div','bet-position__label',
+      'Match: pay up · Raise: push higher · Stay: lock, card wins decide · Fold: forfeit your $ now');
+    legend.style.cssText = 'flex:1;color:var(--text-secondary);font-size:0.55rem;text-align:center;padding:2px 0 6px;';
+
+    // Helper: how much I'm already committed across all positions
+    function myCurrentCommit() {
+      let s = 0;
+      b.positions.forEach(p => { s += (isOffActor ? b.offense[p] : b.defense[p]) || 0; });
+      return s;
+    }
+
+    // Helper: how much this panel's pending decision would add above current commit
+    function pendingDelta() {
+      let d = 0;
+      positions.forEach(p => {
+        const myAmt = isOffActor ? b.offense[p] : b.defense[p];
+        const oppAmt = isOffActor ? b.defense[p] : b.offense[p];
+        if (action[p] === 'match' || action[p] === 'stay') d += Math.max(0, oppAmt - myAmt);
+        else if (action[p] === 'raise') d += Math.max(0, raiseAmt[p] - myAmt);
+      });
+      return d;
+    }
+
+    function render() {
+      container.innerHTML = '';
+      container.appendChild(legend);
+      const committed = myCurrentCommit();
+      const delta = pendingDelta();
+      const available = wallet - committed - delta;
+
+      positions.forEach(pos => {
+        const row = el('div','bet-position');
+        row.style.flexWrap = 'wrap';
+        row.appendChild(el('div','bet-position__label', betPosLabel(pos, state)));
+        row.appendChild(_v2CardArea(state, pos));
+
+        const myAmt = isOffActor ? b.offense[pos] : b.defense[pos];
+        const oppAmt = isOffActor ? b.defense[pos] : b.offense[pos];
+        const diff = Math.max(0, oppAmt - myAmt);
+
+        const info = el('div','bet-position__label',
+          `You $${myAmt} · Them $${oppAmt}`);
+        info.style.cssText = 'color:var(--text-gold);min-width:auto;flex:1;font-size:0.6rem;';
+        row.appendChild(info);
+
+        const btns = el('div','bet-response-btns');
+        const matchBtn = el('button','bet-response-btn bet-response-btn--match', diff > 0 ? `Match +$${diff}` : 'Match');
+        const raiseBtn = el('button','bet-response-btn bet-response-btn--raise','Raise');
+        const stayBtn  = el('button','bet-response-btn','Stay');
+        const foldBtn  = el('button','bet-response-btn bet-response-btn--pass','Fold');
+
+        if (action[pos] === 'match') matchBtn.classList.add('bet-response-btn--active');
+        if (action[pos] === 'raise') raiseBtn.classList.add('bet-response-btn--active');
+        if (action[pos] === 'stay')  stayBtn.classList.add('bet-response-btn--active');
+        if (action[pos] === 'fold')  foldBtn.classList.add('bet-response-btn--active');
+
+        // Match disabled if can't afford the diff
+        const canMatch = available >= (diff - (action[pos]==='match' ? diff : 0));
+        if (!canMatch) { matchBtn.disabled = true; matchBtn.style.opacity = '0.5'; }
+        // Stay also has to afford the diff (since stay will match up)
+        const canStay = available >= (diff - (action[pos]==='stay' ? diff : 0));
+        if (!canStay) { stayBtn.disabled = true; stayBtn.style.opacity = '0.5'; }
+
+        matchBtn.addEventListener('click', () => { action[pos] = 'match'; raiseAmt[pos] = oppAmt; render(); });
+        stayBtn .addEventListener('click', () => {
+          if (!canStay) return;
+          // Stay = accept current amount (if behind, match first)
+          action[pos] = 'stay'; raiseAmt[pos] = Math.max(myAmt, oppAmt); render();
+        });
+        foldBtn .addEventListener('click', () => { action[pos] = 'fold'; raiseAmt[pos] = 0; render(); });
+        raiseBtn.addEventListener('click', () => {
+          action[pos] = 'raise';
+          // Default raise: +1 step above opponent (or opp*2 minimum)
+          const minRaise = Math.max(oppAmt + step, myAmt + step);
+          const budget = wallet - myCurrentCommit() + myAmt;
+          raiseAmt[pos] = Math.min(maxBet, Math.max(minRaise, raiseAmt[pos] || minRaise), budget);
+          render();
+        });
+        btns.appendChild(matchBtn);
+        btns.appendChild(raiseBtn);
+        btns.appendChild(stayBtn);
+        btns.appendChild(foldBtn);
+        row.appendChild(btns);
+
+        // Raise amount controls
+        if (action[pos] === 'raise') {
+          const raiseRow = el('div','bet-controls');
+          raiseRow.style.cssText = 'width:100%;justify-content:center;margin-top:4px;';
+          const minusBtn = el('button','bet-controls__btn','-');
+          const amtEl = el('div','bet-controls__amount','$' + raiseAmt[pos]);
+          const plusBtn = el('button','bet-controls__btn','+');
+          const minRaise = oppAmt + step;
+          minusBtn.addEventListener('click', () => {
+            raiseAmt[pos] = Math.max(minRaise, raiseAmt[pos] - step);
+            render();
+          });
+          plusBtn.addEventListener('click', () => {
+            const budget = wallet - myCurrentCommit() + myAmt;
+            raiseAmt[pos] = Math.min(maxBet, budget, raiseAmt[pos] + step);
+            render();
+          });
+          raiseRow.appendChild(minusBtn);
+          raiseRow.appendChild(amtEl);
+          raiseRow.appendChild(plusBtn);
+          row.appendChild(raiseRow);
+        }
+
+        container.appendChild(row);
+      });
+
+      const summary = el('div','bet-position__label',
+        `Committed: $${committed + delta} | Wallet: $${wallet}`);
+      summary.style.cssText = 'flex:1;color:var(--text-secondary);font-size:0.6rem;';
+      container.appendChild(summary);
+
+      const allDecided = positions.every(p => action[p] !== null);
+      setActionBtn(allDecided ? 'Confirm' : 'Decide each position...', allDecided, allDecided ? () => {
+        // Apply decisions to state.bets
+        positions.forEach(pos => {
+          const myAmt = isOffActor ? b.offense[pos] : b.defense[pos];
+          const oppAmt = isOffActor ? b.defense[pos] : b.offense[pos];
+          if (action[pos] === 'fold') {
+            b.folded[pos] = actorSide;
+          } else if (action[pos] === 'match') {
+            // Match = accept current amount and lock my side
+            if (isOffActor) { b.offense[pos] = oppAmt; b.offStay[pos] = true; }
+            else { b.defense[pos] = oppAmt; b.defStay[pos] = true; }
+          } else if (action[pos] === 'stay') {
+            // Stay locks this side. Also must match if behind.
+            if (isOffActor) { b.offense[pos] = Math.max(myAmt, oppAmt); b.offStay[pos] = true; }
+            else { b.defense[pos] = Math.max(myAmt, oppAmt); b.defStay[pos] = true; }
+          } else if (action[pos] === 'raise') {
+            if (isOffActor) b.offense[pos] = raiseAmt[pos];
+            else b.defense[pos] = raiseAmt[pos];
+            b.raiseCount[pos] = (b.raiseCount[pos] || 0) + 1;
+            // Raising un-stays the opponent (they get a chance to react again)
+            if (isOffActor) b.defStay[pos] = false; else b.offStay[pos] = false;
+          }
+        });
+        hideBettingPanel();
+        resolve();
+      } : null);
+    }
+    render();
+  });
+}
+
+// Phase 5: Defense first response (all 3 positions)
+function waitForDefenseRespondV2(state) {
+  return _v2RespondPanel(state, 'defense', state.bets.positions.slice(), 'Respond to Offense Bets');
+}
+
+// Counter-raise panels (only raised positions passed in)
+function waitForOffenseCounterV2(state, positions) {
+  return _v2RespondPanel(state, 'offense', positions, 'Defense Raised — Your Turn');
+}
+function waitForDefenseCounterV2(state, positions) {
+  return _v2RespondPanel(state, 'defense', positions, 'Offense Raised — Your Turn');
+}
+
+// ============================================================
+// v2 executeDown — NEW FLOW
+// 1. Offense places cards
+// 2. Offense sets initial bets (all 3 positions, min ante $1)
+// 3. Defense places cards
+// 4. Betting loop: defense responds → offense counters → defense counters
+//    until both stay / match / fold on every position
+// 5. Offense picks the rock (reveal of intended play)
+// 6. Reveal cards, dice if pass, resolve yards + side bets
+// ============================================================
 async function executeDown(state, offCards, defCards, myId) {
-  const offSideDrive = state.drive.offenseSide;
-  const pIsOff = isLocalSide(offSideDrive);
+  const offSide = state.drive.offenseSide;
+  const defSide = getDefenseSide(state);
+  const pIsOff = isLocalSide(offSide);
   hideResult(); hideDiceArea(); renderGameInfo(state);
 
   if (isOnline()) {
-    // === ONLINE MODE ===
-    if (pIsOff) {
-      // Local player is offense
-      state.phase='OFFENSE_PLACE_CARDS';
-      setInstruction(`Place 3 of your ${offCards.length} cards on the field (tap card, then tap position)`);
-      state.down.offensePlacements={wr1:null,rb:null,wr2:null};
-      renderField(state);
-      renderHand(offCards, state);
-      await waitForPlacement(state, offCards);
-      checkAbort(myId);
+    // Online disabled in v2 redesign for now — will be reintroduced later
+    throw new Error('Online mode is temporarily disabled during v2 redesign');
+  }
 
-      state.phase='PLACE_ROCK';
-      setInstruction('Place the rock: tap RB (Run) or a WR (Pass)');
-      await waitForRock(state);
-      checkAbort(myId);
+  // ---- Phase 1: Offense places cards (no rock yet) ----
+  state.phase = 'OFFENSE_PLACE_CARDS';
+  state.down.offensePlacements = {wr1:null, rb:null, wr2:null};
+  state.down.defensePlacements = {cb1:null, db:null, cb2:null};
+  state.down.rockPosition = null;
+  renderField(state);
 
-      // Send placement + rock to opponent (card values hidden until reveal)
-      netSend({ type: 'OFFENSE_DONE', data: {
-        placements: { wr1: state.down.offensePlacements.wr1, rb: state.down.offensePlacements.rb, wr2: state.down.offensePlacements.wr2 },
-        rock: state.down.rockPosition
-      }});
-
-      // Wait for opponent defense placement
-      state.phase='DEFENSE_PLACE_CARDS';
-      setInstruction('Waiting for opponent to place defense...');
-      renderHand([], state);
-      const defMsg = await waitForNetMessage();
-      checkAbort(myId);
-      state.down.defensePlacements = defMsg.data.placements;
-    } else {
-      // Local player is defense — wait for opponent offense + rock
-      state.phase='OFFENSE_PLACE_CARDS';
-      setInstruction('Waiting for opponent to place offense...');
-      state.down.offensePlacements={wr1:null,rb:null,wr2:null};
-      renderField(state);
-      renderHand([], state);
-      const offMsg = await waitForNetMessage();
-      checkAbort(myId);
-      state.down.offensePlacements = offMsg.data.placements;
-      state.down.rockPosition = offMsg.data.rock;
-      renderField(state);
-
-      // Local player places defense
-      state.phase='DEFENSE_PLACE_CARDS';
-      setInstruction(`Place 3 of your ${defCards.length} cards on defense (tap card, then tap position)`);
-      state.down.defensePlacements={cb1:null,db:null,cb2:null};
-      renderField(state);
-      renderHand(defCards, state);
-      await waitForPlacement(state, defCards);
-      checkAbort(myId);
-
-      // Send defense placement to opponent
-      netSend({ type: 'DEFENSE_DONE', data: {
-        placements: { cb1: state.down.defensePlacements.cb1, db: state.down.defensePlacements.db, cb2: state.down.defensePlacements.cb2 }
-      }});
-    }
-  } else if (pIsOff) {
-    // === AI MODE: Player on offense ===
-    state.phase='OFFENSE_PLACE_CARDS';
+  if (pIsOff) {
     setInstruction(`Place 3 of your ${offCards.length} cards on the field (tap card, then tap position)`);
-    state.down.offensePlacements={wr1:null,rb:null,wr2:null};
-    renderField(state);
     renderHand(offCards, state);
     if (state.driveNumber === 1 && state.drive.downNumber === 1) {
       await tutorialShow('.hand', 'These are your <b>cards</b>. Higher values are stronger. Tap a card to select it, then tap a field position to place it.', 'down');
-      await tutorialShow('.field', 'This is the <b>field</b>. Place cards on <b>WR1</b>, <b>RB</b>, and <b>WR2</b>. Each offense position is matched against a defender: WR1 vs CB1, RB vs DB, WR2 vs CB2.', 'down');
+      await tutorialShow('.field', 'Place cards on <b>WR1</b>, <b>RB</b>, and <b>WR2</b>. Each offense position is matched against a defender. You will pick the rock (the play that counts for yards) <b>after</b> all bets are in.', 'down');
     }
     await waitForPlacement(state, offCards);
     checkAbort(myId);
-
-    state.phase='PLACE_ROCK';
-    setInstruction('Place the rock: tap RB (Run) or a WR (Pass)');
-    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
-      await tutorialShow('.field', 'Now pick <b>the rock</b> — the position that decides the play. Tap <b>RB</b> for a Run (pure card strength) or a <b>WR</b> for a Pass (card + dice roll). The rock matchup determines yards gained or lost!', 'down');
-    }
-    await waitForRock(state);
-    checkAbort(myId);
-
-    state.phase='DEFENSE_PLACE_CARDS';
-    setInstruction('Defense is setting up...');
-    renderHand([], state);
-    await sleep(600);
-    checkAbort(myId);
-    state.down.defensePlacements = aiPlaceDefense(defCards);
   } else {
-    // === AI MODE: AI on offense ===
-    state.phase='OFFENSE_PLACE_CARDS';
     setInstruction('AI is setting up their offense...');
-    state.down.offensePlacements={wr1:null,rb:null,wr2:null};
-    renderField(state);
+    renderHand([], state);
     await sleep(600);
     checkAbort(myId);
     const aiOff = aiPlaceOffense(offCards);
     state.down.offensePlacements = aiOff.placements;
-    state.down.rockPosition = aiOff.rockPosition;
+    // Note: rock not set yet in v2 — AI picks it later
     renderField(state);
+  }
 
-    state.phase='DEFENSE_PLACE_CARDS';
+  // ---- Phase 2: Set up betting state, auto-ante min on all 3 positions ----
+  state.bets = makeBetsState();
+  const positions = state.bets.positions;
+  const minBet = state.bets.minBet;
+  const maxBet = state.buyIn * 2;
+
+  // Auto-ante: both sides put min on every position
+  positions.forEach(p => {
+    state.bets.offense[p] = minBet;
+    state.bets.defense[p] = minBet;
+  });
+  renderField(state);
+
+  // ---- Phase 3: Offense sets initial bets (can raise above min on any position) ----
+  state.phase = 'OFFENSE_INITIAL_BETS';
+  if (pIsOff) {
+    setInstruction('Set your offense bets (min $' + minBet + ', max $' + maxBet + ')');
+    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+      await tutorialShow('.phase-instruction', 'Set your bets on <b>all three matchups</b>. Min is $' + minBet + ' (auto-ante). The defense will see your bets before placing their cards.', 'up');
+    }
+    await waitForOffenseInitialBetsV2(state);
+    checkAbort(myId);
+  } else {
+    setInstruction('AI offense is placing bets...');
+    await sleep(600);
+    checkAbort(myId);
+    aiOffenseInitialBetsV2(state);
+  }
+  renderField(state);
+
+  // ---- Phase 4: Defense places cards (sees offense bets) ----
+  state.phase = 'DEFENSE_PLACE_CARDS';
+  if (!pIsOff) {
     setInstruction(`Place 3 of your ${defCards.length} cards on defense (tap card, then tap position)`);
-    state.down.defensePlacements={cb1:null,db:null,cb2:null};
-    renderField(state);
     renderHand(defCards, state);
     if (state.driveNumber === 2 && state.drive.downNumber === 1) {
-      await tutorialShow('.hand', 'Now you\'re on <b>defense</b>! Place your cards on <b>CB1</b>, <b>DB</b>, and <b>CB2</b> to counter the offense. Try to match strong cards against the positions you think the opponent will target.', 'down');
+      await tutorialShow('.hand', 'Now you\'re on <b>defense</b>! The offense has already placed bets — use that info. Big bets = they feel confident about that matchup.', 'down');
     }
     await waitForPlacement(state, defCards);
     checkAbort(myId);
-  }
-
-  // === BETTING SEQUENCE ===
-  const nonRockPos = getNonRockPositions(state.down.rockPosition);
-  state.bets.positions = nonRockPos;
-
-  const offSide = state.drive.offenseSide;
-  const defSide = getDefenseSide(state);
-  const canBet = state.wallets[offSide] > 0 || state.wallets[defSide] > 0;
-
-  if (canBet) {
-    const localIsDef = isLocalSide(defSide);
-    const localIsOff = isLocalSide(offSide);
-    const oppLabel = isOnline() ? 'Opponent' : 'AI';
-
-    // ---- ROUND 1: Defense bets first ----
-    state.phase = 'DEFENSE_BET';
+  } else {
+    setInstruction('AI defense is setting up...');
+    renderHand([], state);
+    await sleep(600);
+    checkAbort(myId);
+    state.down.defensePlacements = aiPlaceDefense(defCards);
     renderField(state);
-    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
-      await tutorialShow('.field', 'Time for <b>side bets</b>! On each non-rock matchup, both sides can wager credits. The winner of each card matchup wins the bet. Defense bets first, then offense responds.', 'down');
-    }
-    if (defSide === 'ai' && !isOnline()) {
-      setInstruction('AI defense is placing side bets...');
-      await sleep(600);
-      checkAbort(myId);
-      state.bets.defenseBets = aiBetAsDefense(state);
+  }
+
+  // ---- Phase 5: Betting loop — defense responds, then ping-pong raises until lock ----
+  // Initial defense response to offense bets
+  state.phase = 'DEFENSE_RESPOND';
+  if (pIsOff) {
+    setInstruction('AI defense is responding to your bets...');
+    await sleep(600);
+    checkAbort(myId);
+    aiDefenseRespondV2(state);
+  } else {
+    setInstruction('Respond to offense bets: Match / Raise / Stay / Fold');
+    renderHand([], state);
+    await waitForDefenseRespondV2(state);
+    checkAbort(myId);
+  }
+  renderField(state);
+
+  // Counter-raise loop: runs until all positions locked (both stayed/matched or someone folded)
+  let safety = 0;
+  while (!allBetsLockedV2(state) && safety < 10) {
+    safety++;
+    const raisedByDef = positions.filter(p => !state.bets.folded[p] && state.bets.defense[p] > state.bets.offense[p]);
+    const raisedByOff = positions.filter(p => !state.bets.folded[p] && state.bets.offense[p] > state.bets.defense[p]);
+
+    if (raisedByDef.length > 0) {
+      // Offense must respond to defense's raises
+      state.phase = 'OFFENSE_COUNTER';
+      if (pIsOff) {
+        setInstruction('Defense raised — Match / Raise / Stay / Fold');
+        renderHand([], state);
+        await waitForOffenseCounterV2(state, raisedByDef);
+        checkAbort(myId);
+      } else {
+        setInstruction('AI offense is countering...');
+        await sleep(600);
+        checkAbort(myId);
+        aiOffenseCounterV2(state, raisedByDef);
+      }
       renderField(state);
-      const betSummary = nonRockPos.map(p => `${posLabel(p)}: $${state.bets.defenseBets[p]}`).join(', ');
-      if (nonRockPos.some(p => state.bets.defenseBets[p] > 0)) {
-        await showMessage('AI Side Bets', `Defense bets: ${betSummary}`, 'Respond');
+    } else if (raisedByOff.length > 0) {
+      // Defense must respond to offense's (counter-)raises
+      state.phase = 'DEFENSE_COUNTER';
+      if (pIsOff) {
+        setInstruction('AI defense is countering...');
+        await sleep(600);
+        checkAbort(myId);
+        aiDefenseCounterV2(state, raisedByOff);
+      } else {
+        setInstruction('Offense raised — Match / Raise / Stay / Fold');
+        renderHand([], state);
+        await waitForDefenseCounterV2(state, raisedByOff);
         checkAbort(myId);
       }
-    } else if (localIsDef) {
-      setInstruction('Place your defense side bets on the non-rock cards');
-      renderHand([], state);
-      if (state.driveNumber === 2 && state.drive.downNumber === 1) {
-        await tutorialShow('.phase-instruction', 'Now you\'re on <b>defense</b>! You bet first. Use the <b>+/-</b> buttons to set how much to wager on each matchup. Bet more where you think your card is stronger.', 'up');
-      }
-      await waitForDefenseBet(state);
-      checkAbort(myId);
       renderField(state);
-      if (isOnline()) netSend({ type: 'DEFENSE_BETS', data: state.bets.defenseBets });
     } else {
-      // Remote player is defense — wait for their bets
-      setInstruction(`Waiting for ${oppLabel} to place defense bets...`);
-      renderHand([], state);
-      const msg = await waitForNetMessage();
-      checkAbort(myId);
-      state.bets.defenseBets = msg.data;
-      renderField(state);
-      const betSummary = nonRockPos.map(p => `${posLabel(p)}: $${state.bets.defenseBets[p]}`).join(', ');
-      if (nonRockPos.some(p => state.bets.defenseBets[p] > 0)) {
-        await showMessage(`${oppLabel} Side Bets`, `Defense bets: ${betSummary}`, 'Respond');
-        checkAbort(myId);
-      }
-    }
-
-    // Positions where defense bet vs didn't
-    const defBetPositions = nonRockPos.filter(p => (state.bets.defenseBets[p] || 0) > 0);
-    const unbetPositions = nonRockPos.filter(p => (state.bets.defenseBets[p] || 0) === 0);
-
-    // ---- ROUND 1b: Offense responds to defense bets ----
-    nonRockPos.forEach(p => { state.bets.offenseResponses[p] = 'pass'; state.bets.raiseAmounts[p] = 0; });
-    if (defBetPositions.length > 0) {
-      state.phase = 'OFFENSE_RESPOND';
-      if (offSide === 'ai' && !isOnline()) {
-        const aiResp = aiBetAsOffenseResponse(state);
-        state.bets.offenseResponses = aiResp.responses;
-        state.bets.raiseAmounts = aiResp.raises;
-        const anyAction = defBetPositions.some(p => aiResp.responses[p] !== 'pass');
-        if (anyAction) {
-          setInstruction('AI offense is responding...');
-          await sleep(600);
-          checkAbort(myId);
-          const respSummary = defBetPositions
-            .map(p => `${posLabel(p)}: ${aiResp.responses[p]}${aiResp.responses[p]==='raise'?' $'+aiResp.raises[p]:''}`).join(', ');
-          await showMessage('AI Response', respSummary, 'Continue');
-          checkAbort(myId);
-        }
-        renderField(state);
-      } else if (localIsOff) {
-        setInstruction('Respond to defense side bets');
-        renderHand([], state);
-        if (state.driveNumber === 1 && state.drive.downNumber === 1) {
-          await tutorialShow('.phase-instruction', 'The defense placed bets. For each matchup you can: <b>Match</b> (accept the bet), <b>Raise</b> (increase the stakes), or <b>Pass</b> (fold — costs 10% of buy-in penalty).', 'up');
-        }
-        await waitForOffenseResponse(state);
-        checkAbort(myId);
-        renderField(state);
-        if (isOnline()) netSend({ type: 'OFFENSE_RESPONSES', data: { responses: state.bets.offenseResponses, raises: state.bets.raiseAmounts } });
-      } else {
-        setInstruction(`Waiting for ${oppLabel} to respond...`);
-        const msg = await waitForNetMessage();
-        checkAbort(myId);
-        state.bets.offenseResponses = msg.data.responses;
-        state.bets.raiseAmounts = msg.data.raises;
-        renderField(state);
-        const anyAction = defBetPositions.some(p => msg.data.responses[p] !== 'pass');
-        if (anyAction) {
-          const respSummary = defBetPositions
-            .map(p => `${posLabel(p)}: ${msg.data.responses[p]}${msg.data.responses[p]==='raise'?' $'+msg.data.raises[p]:''}`).join(', ');
-          await showMessage(`${oppLabel} Response`, respSummary, 'Continue');
-          checkAbort(myId);
-        }
-      }
-
-      // Defense matches raises if any
-      const hasRaises = defBetPositions.some(p => state.bets.offenseResponses[p] === 'raise');
-      if (hasRaises) {
-        state.phase = 'DEFENSE_MATCH';
-        if (defSide === 'ai' && !isOnline()) {
-          state.bets.defenseMatched = aiBetDefenseMatch(state);
-          const matchSummary = defBetPositions.filter(p => state.bets.offenseResponses[p]==='raise')
-            .map(p => `${posLabel(p)}: ${state.bets.defenseMatched[p]?'matched':'passed'}`).join(', ');
-          setInstruction('AI defense deciding on raises...');
-          await sleep(600);
-          checkAbort(myId);
-          await showMessage('AI Match Decision', matchSummary, 'Continue');
-          checkAbort(myId);
-        } else if (localIsDef) {
-          setInstruction('Offense raised! Match or pass?');
-          renderHand([], state);
-          await waitForDefenseMatch(state);
-          checkAbort(myId);
-          if (isOnline()) netSend({ type: 'DEFENSE_MATCHED', data: state.bets.defenseMatched });
-        } else {
-          setInstruction(`Waiting for ${oppLabel} to decide on raises...`);
-          const msg = await waitForNetMessage();
-          checkAbort(myId);
-          state.bets.defenseMatched = msg.data;
-          const matchSummary = defBetPositions.filter(p => state.bets.offenseResponses[p]==='raise')
-            .map(p => `${posLabel(p)}: ${msg.data[p]?'matched':'passed'}`).join(', ');
-          await showMessage(`${oppLabel} Match Decision`, matchSummary, 'Continue');
-          checkAbort(myId);
-        }
-      }
-    }
-
-    // ---- ROUND 2: Offense initiates bets on positions defense passed on ----
-    if (unbetPositions.length > 0 && state.wallets[offSide] > 0) {
-      state.phase = 'OFFENSE_BET';
-      if (offSide === 'ai' && !isOnline()) {
-        state.bets.offenseBets = aiBetAsOffenseInitiate(state, unbetPositions);
-        renderField(state);
-        const anyOffBets = unbetPositions.some(p => (state.bets.offenseBets[p] || 0) > 0);
-        if (anyOffBets) {
-          const betSummary = unbetPositions.map(p => `${posLabel(p)}: $${state.bets.offenseBets[p]}`).join(', ');
-          setInstruction('AI offense is placing bets...');
-          await sleep(600);
-          checkAbort(myId);
-          await showMessage('AI Offense Bets', `Offense bets: ${betSummary}`, 'Respond');
-          checkAbort(myId);
-        }
-      } else if (localIsOff) {
-        setInstruction('Defense passed — place your offense bets');
-        renderHand([], state);
-        if (state.driveNumber === 1 && state.drive.downNumber === 1) {
-          await tutorialShow('.phase-instruction', 'The defense passed on some matchups. Now <b>you</b> can bet on those positions! If you bet, the defense gets a chance to respond.', 'up');
-        }
-        await waitForOffenseInitiateBet(state, unbetPositions);
-        checkAbort(myId);
-        renderField(state);
-        if (isOnline()) netSend({ type: 'OFFENSE_BETS', data: state.bets.offenseBets });
-      } else {
-        setInstruction(`Waiting for ${oppLabel} to place offense bets...`);
-        const msg = await waitForNetMessage();
-        checkAbort(myId);
-        state.bets.offenseBets = msg.data;
-        renderField(state);
-        const anyOffBets = unbetPositions.some(p => (msg.data[p] || 0) > 0);
-        if (anyOffBets) {
-          const betSummary = unbetPositions.map(p => `${posLabel(p)}: $${msg.data[p]}`).join(', ');
-          await showMessage(`${oppLabel} Offense Bets`, `Offense bets: ${betSummary}`, 'Respond');
-          checkAbort(myId);
-        }
-      }
-
-      // Defense responds to offense-initiated bets
-      const offBetPositions = unbetPositions.filter(p => (state.bets.offenseBets[p] || 0) > 0);
-      if (offBetPositions.length > 0) {
-        state.phase = 'DEFENSE_RESPOND_OFF';
-        if (defSide === 'ai' && !isOnline()) {
-          const aiResp = aiBetDefenseRespond(state, state.bets.offenseBets);
-          state.bets.offInitDefResponses = aiResp.responses;
-          state.bets.offInitDefRaises = aiResp.raises;
-          const anyAction = offBetPositions.some(p => aiResp.responses[p] !== 'pass');
-          if (anyAction) {
-            setInstruction('AI defense is responding...');
-            await sleep(600);
-            checkAbort(myId);
-            const respSummary = offBetPositions
-              .map(p => `${posLabel(p)}: ${aiResp.responses[p]}${aiResp.responses[p]==='raise'?' $'+aiResp.raises[p]:''}`).join(', ');
-            await showMessage('AI Defense Response', respSummary, 'Continue');
-            checkAbort(myId);
-          }
-          renderField(state);
-        } else if (localIsDef) {
-          setInstruction('Respond to offense side bets');
-          renderHand([], state);
-          await waitForDefenseRespondToOffBet(state);
-          checkAbort(myId);
-          renderField(state);
-          if (isOnline()) netSend({ type: 'DEF_RESPOND_OFF', data: { responses: state.bets.offInitDefResponses, raises: state.bets.offInitDefRaises } });
-        } else {
-          setInstruction(`Waiting for ${oppLabel} to respond...`);
-          const msg = await waitForNetMessage();
-          checkAbort(myId);
-          state.bets.offInitDefResponses = msg.data.responses;
-          state.bets.offInitDefRaises = msg.data.raises;
-          renderField(state);
-          const anyAction = offBetPositions.some(p => msg.data.responses[p] !== 'pass');
-          if (anyAction) {
-            const respSummary = offBetPositions
-              .map(p => `${posLabel(p)}: ${msg.data.responses[p]}${msg.data.responses[p]==='raise'?' $'+msg.data.raises[p]:''}`).join(', ');
-            await showMessage(`${oppLabel} Defense Response`, respSummary, 'Continue');
-            checkAbort(myId);
-          }
-        }
-
-        // Offense matches defense raises on offense-initiated bets
-        const hasOffRaises = offBetPositions.some(p => (state.bets.offInitDefResponses[p]) === 'raise');
-        if (hasOffRaises) {
-          state.phase = 'OFFENSE_MATCH_DEF';
-          if (offSide === 'ai' && !isOnline()) {
-            state.bets.offInitOffMatched = aiBetOffenseMatchRaise(state);
-            const matchSummary = offBetPositions.filter(p => state.bets.offInitDefResponses[p]==='raise')
-              .map(p => `${posLabel(p)}: ${state.bets.offInitOffMatched[p]?'matched':'passed'}`).join(', ');
-            setInstruction('AI offense deciding on raises...');
-            await sleep(600);
-            checkAbort(myId);
-            await showMessage('AI Match Decision', matchSummary, 'Continue');
-            checkAbort(myId);
-          } else if (localIsOff) {
-            setInstruction('Defense raised! Match or pass?');
-            renderHand([], state);
-            await waitForOffenseMatchDefRaise(state);
-            checkAbort(myId);
-            if (isOnline()) netSend({ type: 'OFFENSE_MATCHED', data: state.bets.offInitOffMatched });
-          } else {
-            setInstruction(`Waiting for ${oppLabel} to decide on raises...`);
-            const msg = await waitForNetMessage();
-            checkAbort(myId);
-            state.bets.offInitOffMatched = msg.data;
-            const matchSummary = offBetPositions.filter(p => state.bets.offInitDefResponses[p]==='raise')
-              .map(p => `${posLabel(p)}: ${msg.data[p]?'matched':'passed'}`).join(', ');
-            await showMessage(`${oppLabel} Match Decision`, matchSummary, 'Continue');
-            checkAbort(myId);
-          }
-        }
-      }
+      break; // nothing to do, safety
     }
   }
-  // === END BETTING SEQUENCE ===
 
-  state.phase='REVEAL';
+  // ---- Phase 6: Offense picks the rock (reveal of the play) ----
+  state.phase = 'PLACE_ROCK';
+  if (pIsOff) {
+    setInstruction('Place the rock: tap RB (Run) or a WR (Pass)');
+    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+      await tutorialShow('.field', 'All bets are locked. Now pick <b>the rock</b> — the matchup that decides the yards. Run=RB, Pass=WR (card + dice).', 'down');
+    }
+    await waitForRock(state);
+    checkAbort(myId);
+  } else {
+    setInstruction('AI is picking the rock...');
+    await sleep(600);
+    checkAbort(myId);
+    // Simple AI rock pick: pick strongest offense card matchup
+    const scores = positions.map(p => {
+      const oc = state.down.offensePlacements[p];
+      const dc = state.down.defensePlacements[MATCHUPS[p]];
+      return { p, diff: (oc?.value || 0) - (dc?.value || 0) };
+    }).sort((a,b) => b.diff - a.diff);
+    state.down.rockPosition = scores[0].p;
+    renderField(state);
+  }
+
+  // ---- Phase 7: Reveal + dice + resolve ----
+  state.phase = 'REVEAL';
   setInstruction('Revealing cards...');
   renderField(state);
   await revealAllCards();
   checkAbort(myId);
   if (state.driveNumber === 1 && state.drive.downNumber === 1) {
-    await tutorialShow('.field', 'All cards are revealed! The <b>rock position</b> determines the play. The offense card faces the matched defender — highest value wins.', 'down');
+    await tutorialShow('.field', 'All cards revealed! The <b>rock</b> matchup determines the yards on the play.', 'down');
   }
 
-  const isPass = state.down.rockPosition==='wr1'||state.down.rockPosition==='wr2';
-  let oD=null, dD=null;
-
+  const isPass = state.down.rockPosition === 'wr1' || state.down.rockPosition === 'wr2';
+  let oD = null, dD = null;
   if (isPass) {
-    state.phase='DICE_ROLL';
+    state.phase = 'DICE_ROLL';
     setInstruction('Rolling the dice...');
-    if (isOnline()) {
-      // Host rolls dice, sends to guest
-      if (playerRole === 'host') {
-        oD=rollDice(); dD=rollDice();
-        netSend({ type: 'DICE', data: { offense: oD, defense: dD } });
-      } else {
-        const diceMsg = await waitForNetMessage();
-        checkAbort(myId);
-        oD = diceMsg.data.offense; dD = diceMsg.data.defense;
-      }
-    } else {
-      oD=rollDice(); dD=rollDice();
-    }
-    state.down.offenseDice=oD; state.down.defenseDice=dD;
+    oD = rollDice(); dD = rollDice();
+    state.down.offenseDice = oD; state.down.defenseDice = dD;
     await renderDiceRoll(oD, dD);
     checkAbort(myId);
     if (state.driveNumber === 1 && state.drive.downNumber === 1) {
-      await tutorialShow('.dice-area', 'This is a <b>pass play</b>, so both sides roll 2 dice. The dice totals are added to the card values — more risk, more reward!', 'up');
+      await tutorialShow('.dice-area', '<b>Pass play</b> — dice totals are added to card values on the rock matchup.', 'up');
     }
   }
 
-  state.phase='RESOLVE_DOWN';
+  state.phase = 'RESOLVE_DOWN';
   const result = resolveDown(state.down.offensePlacements, state.down.defensePlacements, state.down.rockPosition, oD, dD);
   state.down.result = result;
 
-  const sign=result.yards>=0?'+':'';
-  const type=result.yards>0?'positive':result.yards<0?'negative':'neutral';
-  showResult(`${sign}${result.yards} yards | ${result.breakdown}`, type);
+  const sign = result.yards >= 0 ? '+' : '';
+  const type = result.yards > 0 ? 'positive' : result.yards < 0 ? 'negative' : 'neutral';
+  showResult(`${sign}${result.yards} yards`, type);
   if (state.driveNumber === 1 && state.drive.downNumber === 1) {
-    await tutorialShow('.result-display', 'Here\'s the result! <b>Positive yards</b> = offense advances. <b>Negative yards</b> = defense pushes back. Get 10 yards in 3 downs for a first down, or reach the end zone to score a touchdown!', 'up');
+    await tutorialShow('.result-display', 'Result! Positive = offense advances, negative = defense pushes back. 10 yards in 3 downs = first down.', 'up');
   }
 
-  // Resolve side bets after down result
-  if (canBet) {
-    resolveBets(state);
-    persistentWallets = { player: state.wallets.player, ai: state.wallets.ai };
-    renderWallets(state);
-    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
-      await tutorialShow('.wallet-bar', 'Side bets are settled! Check your <b>credits</b> — winners collect, losers pay. The pot stays until the football game ends.', 'up');
-    }
-    await showBetResults(state);
-    checkAbort(myId);
+  // Resolve side bets after down
+  resolveBets(state);
+  persistentWallets = { player: state.wallets.player, ai: state.wallets.ai };
+  renderWallets(state);
+  if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+    await tutorialShow('.wallet-bar', 'Side bets settled! Winners collect each matchup pot.', 'up');
   }
+  await showBetResults(state);
+  checkAbort(myId);
 
   setInstruction('');
   await waitForNext();
@@ -2880,6 +3068,21 @@ async function executeDown(state, offCards, defCards, myId) {
   hideDiceArea();
   return result;
 }
+
+// ============================================================
+// v2 BETTING HELPERS
+// ============================================================
+function allBetsLockedV2(state) {
+  const b = state.bets;
+  return b.positions.every(p => {
+    if (b.folded[p]) return true;
+    // Locked when amounts are equal AND at least one side has stayed.
+    // (A raise unstays the opponent and creates inequality until they react.)
+    if (b.offense[p] !== b.defense[p]) return false;
+    return b.offStay[p] || b.defStay[p];
+  });
+}
+
 
 async function executePossession(state, offenseSide, myId) {
   state.drive.offenseSide = offenseSide;
