@@ -42,6 +42,97 @@
       --fade-duration: 300ms;
     }
 
+    /* ---- Mode Select Screen ---- */
+    .mode-select {
+      position: fixed; inset: 0; display: flex;
+      align-items: center; justify-content: center;
+      background: var(--bg-dark); z-index: 200;
+      transition: opacity var(--fade-duration);
+    }
+    .mode-select--hidden { opacity: 0; pointer-events: none; }
+    .mode-select__panel {
+      text-align: center; max-width: 340px; width: 90%;
+    }
+    .mode-select__title {
+      font-size: 1.2rem; color: var(--text-gold); margin-bottom: 6px;
+      text-shadow: 0 0 8px rgba(255,200,0,0.6), 0 0 20px rgba(255,200,0,0.3);
+    }
+    .mode-select__subtitle {
+      font-size: 0.45rem; color: var(--text-secondary); margin-bottom: 28px;
+    }
+    .mode-select__buttons {
+      display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px;
+    }
+    .mode-select__btn {
+      padding: 16px 28px; border-radius: 2px;
+      font-size: 0.7rem; font-weight: 600;
+      box-shadow: 4px 4px 0 #000;
+      transition: transform 0.05s, box-shadow 0.05s;
+      border: 2px solid transparent;
+    }
+    .mode-select__btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+    .mode-select__btn--ai { background: var(--accent-green); color: #fff; }
+    .mode-select__btn--online { background: var(--accent-orange); color: #fff; }
+    .mode-select__btn--back { background: var(--panel-border); color: var(--text-primary); font-size: 0.55rem; padding: 10px 20px; }
+
+    /* ---- Lobby ---- */
+    .lobby { display: none; }
+    .lobby--visible { display: block; }
+    .lobby__section {
+      background: var(--panel-bg); border: 2px solid var(--panel-border);
+      border-radius: 2px; padding: 16px; margin-bottom: 14px;
+      box-shadow: 4px 4px 0 #000;
+    }
+    .lobby__label {
+      font-size: 0.5rem; color: var(--text-gold); margin-bottom: 10px;
+    }
+    .lobby__room-code {
+      font-size: 1.4rem; color: var(--text-gold); letter-spacing: 0.3em;
+      text-shadow: 0 0 8px rgba(255,200,0,0.6);
+      margin: 10px 0;
+    }
+    .lobby__input {
+      font-family: var(--font-main); font-size: 0.8rem;
+      background: #0a0a1a; color: var(--text-gold); border: 2px solid var(--panel-border);
+      border-radius: 2px; padding: 10px 14px; text-align: center;
+      letter-spacing: 0.3em; text-transform: uppercase; width: 100%;
+      margin-bottom: 10px;
+    }
+    .lobby__input::placeholder { color: var(--text-secondary); letter-spacing: 0.1em; font-size: 0.5rem; }
+    .lobby__status {
+      font-size: 0.45rem; color: var(--text-secondary); margin-top: 8px;
+    }
+    .lobby__status--error { color: var(--accent-red); }
+    .lobby__status--ok { color: var(--accent-green); }
+    .lobby__or {
+      font-size: 0.45rem; color: var(--text-secondary); text-align: center;
+      margin-bottom: 14px;
+    }
+    .lobby__config-row {
+      display: flex; gap: 10px; margin-bottom: 10px;
+    }
+    .lobby__config-label {
+      font-size: 0.4rem; color: var(--text-secondary); flex: 1;
+    }
+    .lobby__config-input {
+      font-family: var(--font-main); font-size: 0.6rem;
+      background: #0a0a1a; color: var(--text-gold); border: 2px solid var(--panel-border);
+      border-radius: 2px; padding: 6px 8px; width: 100%; margin-top: 4px;
+      display: block;
+    }
+    .lobby__config-locked .lobby__config-input { opacity: 0.5; pointer-events: none; }
+    .lobby__config-locked #lobbySetBtn { opacity: 0.5; pointer-events: none; }
+
+    /* ---- Connection Status ---- */
+    .conn-status {
+      display: none; font-size: 0.4rem; text-align: center;
+      padding: 4px 8px; border-radius: 2px;
+    }
+    .conn-status--visible { display: block; }
+    .conn-status--connected { background: #0a2a0a; color: var(--accent-green); border: 1px solid var(--accent-green); }
+    .conn-status--waiting { background: #2a1a00; color: var(--accent-orange); border: 1px solid var(--accent-orange); }
+    .conn-status--disconnected { background: #2a0a0a; color: var(--accent-red); border: 1px solid var(--accent-red); }
+
     /* ---- Reset ---- */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 16px; }
@@ -144,6 +235,12 @@
     .card__back {
       background: var(--card-back); border: 2px solid var(--card-back-pattern);
       background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--card-back-pattern) 4px, var(--card-back-pattern) 5px);
+    }
+    .card__hidden-label {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-main); font-size: 0.45rem; color: var(--text-gold);
+      text-align: center; line-height: 1.4; z-index: 2;
+      text-shadow: 0 0 6px rgba(0,0,0,0.8); pointer-events: none;
     }
     .card__front {
       background: var(--card-face); border: 2px solid var(--card-border);
@@ -251,7 +348,7 @@
     .restart-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
 
     .copyright {
-      position: fixed; bottom: 8px; right: 10px; z-index: 50;
+      position: fixed; bottom: 8px; right: 10px; z-index: 250;
       font-family: var(--font-main); font-size: 0.35rem;
       color: #444466; pointer-events: none; user-select: none;
     }
@@ -319,7 +416,7 @@
     }
     .config-bar--locked { animation: none; }
     .config-bar--locked .config-input { opacity: 0.5; pointer-events: none; }
-    .config-bar--locked .config-bar__set-btn { background: var(--accent-orange); }
+    .config-bar--locked .config-bar__set-btn { background: var(--accent-orange); pointer-events: none; opacity: 0.5; }
 
     /* ---- Wallet Bar ---- */
     .wallet-bar {
@@ -389,7 +486,10 @@
       z-index: 5; white-space: nowrap; line-height: 1.3;
     }
     .bet-badge--raise { background: var(--accent-orange); color: #fff; }
-    .bet-badge--pass { background: var(--accent-red); color: #fff; opacity: 0.7; }
+    .bet-badge--pass { background: var(--accent-red); color: #fff; opacity: 0.85; }
+    .bet-badge--locked { background: #4a90e2; color: #fff; }
+    .field__slot--folded .card { opacity: 0.35; filter: grayscale(0.7); }
+    .field__slot--locked .card { box-shadow: 0 0 0 2px #4a90e2 inset; }
     .bet-result-text { font-size: 0.55rem; font-weight: bold; margin-top: 4px; text-align: center; }
     .bet-result-text--win { color: var(--accent-green); }
     .bet-result-text--loss { color: var(--accent-red); }
@@ -400,20 +500,119 @@
       #app { max-width: 520px; padding: 16px; gap: 14px; }
       .scoreboard__score { font-size: 1.6rem; }
     }
+
+    /* ---- Tutorial Tooltips ---- */
+    .tutorial-overlay {
+      position: fixed; inset: 0; z-index: 9000;
+      background: rgba(0,0,0,0.55); pointer-events: auto;
+    }
+    .tutorial-tooltip {
+      position: fixed; z-index: 9001;
+      background: var(--panel-bg); border: 2px solid var(--text-gold);
+      border-radius: 4px; padding: 12px 16px;
+      max-width: 280px; box-shadow: 4px 4px 0 #000;
+      font-family: var(--font-main); font-size: 0.5rem;
+      color: var(--text-primary); line-height: 1.5;
+    }
+    .tutorial-tooltip__text { margin-bottom: 10px; }
+    .tutorial-tooltip__btns { display: flex; gap: 8px; justify-content: flex-end; }
+    .tutorial-tooltip__btn {
+      padding: 6px 14px; border-radius: 2px; font-size: 0.45rem;
+      font-weight: 600; box-shadow: 2px 2px 0 #000;
+      border: 2px solid transparent; cursor: pointer;
+    }
+    .tutorial-tooltip__btn--next { background: var(--accent-green); color: #fff; }
+    .tutorial-tooltip__btn--skip { background: var(--panel-border); color: var(--text-primary); }
+    .tutorial-tooltip__btn:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #000; }
+    .tutorial-highlight {
+      position: relative; z-index: 9002 !important;
+      box-shadow: 0 0 0 4px var(--text-gold), 0 0 16px rgba(255,215,0,0.4);
+      border-radius: 4px;
+    }
+    .tutorial-arrow {
+      position: absolute; width: 0; height: 0;
+      border: 8px solid transparent;
+    }
+    .tutorial-arrow--up { top: -16px; left: 50%; transform: translateX(-50%); border-bottom-color: var(--text-gold); }
+    .tutorial-arrow--down { bottom: -16px; left: 50%; transform: translateX(-50%); border-top-color: var(--text-gold); }
+    .tutorial-arrow--left { left: -16px; top: 50%; transform: translateY(-50%); border-right-color: var(--text-gold); }
+    .tutorial-arrow--right { right: -16px; top: 50%; transform: translateY(-50%); border-left-color: var(--text-gold); }
+    .tutorial-toggle {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 18px; justify-content: center;
+      font-family: var(--font-main); font-size: 0.4rem; color: var(--text-secondary);
+    }
+    .tutorial-toggle input { accent-color: var(--text-gold); width: 16px; height: 16px; cursor: pointer; }
+    .tutorial-toggle label { cursor: pointer; }
+
+    /* ---- Card Value Key (inline, below field) ---- */
+    .card-key {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; flex-wrap: wrap;
+      font-family: var(--font-main); font-size: 0.525rem;
+      color: var(--text-secondary); padding: 3px 0;
+    }
+    .card-key__label { color: var(--text-gold); font-weight: bold; margin-right: 2px; }
+    .card-key__item { white-space: nowrap; }
+    .card-key__val { color: var(--text-gold); }
   </style>
 </head>
 <body>
+  <!-- Mode Selection Screen -->
+  <div class="mode-select" id="modeSelect">
+    <div class="mode-select__panel">
+      <div class="mode-select__title">Ball Crap</div>
+      <div class="mode-select__subtitle">Football meets Craps</div>
+      <div class="mode-select__buttons" id="modeButtons">
+        <button class="mode-select__btn mode-select__btn--ai" onclick="selectMode('ai')">Play vs AI</button>
+        <button class="mode-select__btn mode-select__btn--online" onclick="selectMode('online')">Create Game</button>
+        <button class="mode-select__btn mode-select__btn--online" onclick="selectJoin()">Join Game</button>
+      </div>
+      <div class="tutorial-toggle">
+        <input type="checkbox" id="tutorialSkip">
+        <label for="tutorialSkip">I've played before (skip tips)</label>
+      </div>
+      <div class="lobby" id="lobby">
+        <div class="lobby__section" id="lobbyConfig">
+          <div class="lobby__label">Set Bets</div>
+          <div class="lobby__config-row">
+            <label class="lobby__config-label">Buy-in: <input type="number" class="lobby__config-input" id="lobbyBuyIn" value="10" min="5"></label>
+            <label class="lobby__config-label">Balance: <input type="number" class="lobby__config-input" id="lobbyBalance" value="100" min="10"></label>
+          </div>
+          <button class="mode-select__btn mode-select__btn--online" style="width:100%" id="lobbySetBtn" onclick="lobbySetConfig()">Set Bets</button>
+          <div class="lobby__status" id="lobbyConfigStatus"></div>
+        </div>
+        <div class="lobby__section" id="lobbyCreate" style="display:none">
+          <div class="lobby__label">Create Room</div>
+          <button class="mode-select__btn mode-select__btn--online" style="width:100%" onclick="createRoom()">Create</button>
+          <div class="lobby__room-code" id="roomCode"></div>
+          <div class="lobby__status" id="createStatus"></div>
+        </div>
+        <div class="lobby__or" id="lobbyOr" style="display:none">— or —</div>
+        <div class="lobby__section" id="lobbyJoin" style="display:none">
+          <div class="lobby__label">Join Room</div>
+          <input class="lobby__input" id="joinInput" type="text" maxlength="4" placeholder="Enter code" autocomplete="off">
+          <button class="mode-select__btn mode-select__btn--online" style="width:100%" onclick="joinRoom()">Join</button>
+          <div class="lobby__status" id="joinStatus"></div>
+        </div>
+        <button class="mode-select__btn mode-select__btn--back" onclick="lobbyBack()">Back</button>
+      </div>
+    </div>
+  </div>
+
   <button class="restart-btn" onclick="restartGame()">Restart</button>
   <div class="copyright">© 2025 Erick Delgado Rodriguez</div>
+
   <div id="app">
+    <div class="conn-status" id="connStatus"></div>
     <div class="scoreboard">
       <div class="scoreboard__team">
-        <div class="scoreboard__label">You</div>
+        <div class="scoreboard__label">Player 1</div>
         <div class="scoreboard__score scoreboard__score--player">0</div>
       </div>
       <div class="scoreboard__divider"></div>
       <div class="scoreboard__team">
-        <div class="scoreboard__label">AI</div>
+        <div class="scoreboard__label">Player 2</div>
         <div class="scoreboard__score scoreboard__score--ai">0</div>
       </div>
     </div>
@@ -426,7 +625,7 @@
 
     <div class="wallet-bar">
       <div class="wallet wallet--player">
-        <div class="wallet__label">Your Credits</div>
+        <div class="wallet__label">Offense Credits</div>
         <div class="wallet__amount wallet__amount--player">100</div>
       </div>
       <div class="wallet__pot">
@@ -434,7 +633,7 @@
         <div class="wallet__amount wallet__amount--pot">20</div>
       </div>
       <div class="wallet wallet--ai">
-        <div class="wallet__label">AI Credits</div>
+        <div class="wallet__label">Defense Credits</div>
         <div class="wallet__amount wallet__amount--ai">100</div>
       </div>
     </div>
@@ -466,6 +665,15 @@
         <div class="field__slot field__slot--rb"><div class="field__slot-label">RB</div><div class="card-slot">RB</div><div class="rock">&#127944;</div></div>
         <div class="field__slot field__slot--wr2"><div class="field__slot-label">WR</div><div class="card-slot">WR</div><div class="rock">&#127944;</div></div>
       </div>
+    </div>
+
+    <div class="card-key">
+      <span class="card-key__label">Card Values:</span>
+      <span class="card-key__item">A=<span class="card-key__val">14</span></span>
+      <span class="card-key__item">K=<span class="card-key__val">13</span></span>
+      <span class="card-key__item">Q=<span class="card-key__val">12</span></span>
+      <span class="card-key__item">J=<span class="card-key__val">11</span></span>
+      <span class="card-key__item">10–2=<span class="card-key__val">face</span></span>
     </div>
 
     <div class="dice-area">
@@ -503,6 +711,258 @@ function el(tag, cls, txt) {
   if (cls) cls.split(' ').forEach(c => { if (c) e.classList.add(c); });
   if (txt) e.textContent = txt;
   return e;
+}
+
+// ============================================================
+// MODE SELECTION & NETWORKING
+// ============================================================
+let gameMode = 'ai'; // 'ai' or 'online'
+let playerRole = null; // 'host' or 'guest' (online only)
+let roomCode = null;
+let onlineConfig = null; // { buyIn, startingBalance } set in lobby before room creation
+let ws = null; // WebSocket connection
+let wsMessageQueue = []; // incoming messages waiting to be consumed
+let wsMessageResolve = null; // resolver for waitForNetMessage()
+
+const RELAY_URL = 'wss://ball-crap.onrender.com';
+
+function generateRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to avoid confusion
+  let code = '';
+  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+// --- Mode Selection UI ---
+function selectMode(mode) {
+  if (mode === 'ai') {
+    gameMode = 'ai';
+    tutorialInit();
+    hideModeSelect();
+    startGame();
+  } else {
+    // Host flow — set bets first, then create room
+    $('#modeButtons').style.display = 'none';
+    $('#lobby').classList.add('lobby--visible');
+    $('#lobbyConfig').style.display = '';
+    $('#lobbyJoin').style.display = 'none';
+    $('#lobbyOr').style.display = 'none';
+  }
+}
+
+function selectJoin() {
+  // Guest flow — just show join input
+  $('#modeButtons').style.display = 'none';
+  $('#lobby').classList.add('lobby--visible');
+  $('#lobbyConfig').style.display = 'none';
+  $('#lobbyCreate').style.display = 'none';
+  $('#lobbyOr').style.display = 'none';
+  $('#lobbyJoin').style.display = '';
+}
+
+function lobbySetConfig() {
+  let buyIn = parseInt($('#lobbyBuyIn').value) || 10;
+  let bal = parseInt($('#lobbyBalance').value) || 100;
+  if (buyIn < 5) buyIn = 5;
+  if (bal < buyIn * 2) bal = buyIn * 2;
+  $('#lobbyBuyIn').value = buyIn;
+  $('#lobbyBalance').value = bal;
+  onlineConfig = { buyIn, startingBalance: bal };
+  // Lock config, show Create Room
+  $('#lobbyConfig').classList.add('lobby__config-locked');
+  $('#lobbySetBtn').textContent = 'Locked';
+  $('#lobbyConfigStatus').textContent = `Buy-in: $${buyIn} | Balance: $${bal}`;
+  $('#lobbyConfigStatus').className = 'lobby__status lobby__status--ok';
+  $('#lobbyCreate').style.display = '';
+}
+
+function lobbyResetConfig() {
+  onlineConfig = null;
+  $('#lobbyConfig').style.display = '';
+  $('#lobbyConfig').classList.remove('lobby__config-locked');
+  $('#lobbySetBtn').textContent = 'Set Bets';
+  $('#lobbyConfigStatus').textContent = '';
+  $('#lobbyBuyIn').value = 10;
+  $('#lobbyBalance').value = 100;
+  $('#lobbyCreate').style.display = 'none';
+  $('#lobbyOr').style.display = 'none';
+  $('#lobbyJoin').style.display = 'none';
+}
+
+function lobbyBack() {
+  $('#lobby').classList.remove('lobby--visible');
+  $('#modeButtons').style.display = 'flex';
+  $('#roomCode').textContent = '';
+  $('#createStatus').textContent = '';
+  $('#joinStatus').textContent = '';
+  $('#joinInput').value = '';
+  lobbyResetConfig();
+  netDisconnect();
+}
+
+function hideModeSelect() {
+  $('#modeSelect').classList.add('mode-select--hidden');
+}
+
+function showModeSelect() {
+  $('#modeSelect').classList.remove('mode-select--hidden');
+  $('#lobby').classList.remove('lobby--visible');
+  $('#modeButtons').style.display = 'flex';
+  $('#roomCode').textContent = '';
+  $('#createStatus').textContent = '';
+  $('#joinStatus').textContent = '';
+  $('#joinInput').value = '';
+  lobbyResetConfig();
+}
+
+function createRoom() {
+  if (!RELAY_URL) {
+    $('#createStatus').textContent = 'Relay server not configured yet';
+    $('#createStatus').className = 'lobby__status lobby__status--error';
+    return;
+  }
+  roomCode = generateRoomCode();
+  playerRole = 'host';
+  $('#roomCode').textContent = roomCode;
+  $('#createStatus').textContent = 'Connecting...';
+  $('#createStatus').className = 'lobby__status';
+  netConnect(roomCode, 'host');
+}
+
+function joinRoom() {
+  const code = $('#joinInput').value.trim().toUpperCase();
+  if (code.length !== 4) {
+    $('#joinStatus').textContent = 'Enter a 4-letter code';
+    $('#joinStatus').className = 'lobby__status lobby__status--error';
+    return;
+  }
+  if (!RELAY_URL) {
+    $('#joinStatus').textContent = 'Relay server not configured yet';
+    $('#joinStatus').className = 'lobby__status lobby__status--error';
+    return;
+  }
+  roomCode = code;
+  playerRole = 'guest';
+  $('#joinStatus').textContent = 'Connecting...';
+  $('#joinStatus').className = 'lobby__status';
+  netConnect(roomCode, 'guest');
+}
+
+// --- WebSocket Networking ---
+function netConnect(room, role) {
+  if (ws) ws.close();
+  wsMessageQueue = [];
+  wsMessageResolve = null;
+
+  const url = `${RELAY_URL}?room=${room}&role=${role}`;
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    const statusEl = role === 'host' ? '#createStatus' : '#joinStatus';
+    $(statusEl).textContent = 'Connected — waiting for opponent...';
+    $(statusEl).className = 'lobby__status lobby__status--ok';
+    setConnStatus('waiting', 'Waiting for opponent...');
+  };
+
+  ws.onmessage = (evt) => {
+    let msg;
+    try { msg = JSON.parse(evt.data); } catch { return; }
+
+    if (msg.type === 'OPPONENT_JOINED') {
+      setConnStatus('connected', 'Opponent connected');
+      gameMode = 'online';
+      // Host sends config to guest before starting
+      if (playerRole === 'host' && onlineConfig) {
+        netSend({ type: 'CONFIG', data: onlineConfig });
+      }
+      hideModeSelect();
+      startGame();
+      return;
+    }
+
+    // Guest receives config before game starts
+    if (msg.type === 'CONFIG') {
+      onlineConfig = msg.data;
+      return;
+    }
+
+    if (msg.type === 'OPPONENT_LEFT') {
+      setConnStatus('disconnected', 'Opponent disconnected');
+      return;
+    }
+
+    // Queue game messages for consumption by waitForNetMessage
+    if (wsMessageResolve) {
+      const resolve = wsMessageResolve;
+      wsMessageResolve = null;
+      resolve(msg);
+    } else {
+      wsMessageQueue.push(msg);
+    }
+  };
+
+  ws.onclose = () => {
+    if (gameMode === 'online') {
+      setConnStatus('disconnected', 'Connection lost');
+    }
+  };
+
+  ws.onerror = () => {
+    const statusEl = role === 'host' ? '#createStatus' : '#joinStatus';
+    $(statusEl).textContent = 'Connection failed';
+    $(statusEl).className = 'lobby__status lobby__status--error';
+  };
+}
+
+function netSend(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+  }
+}
+
+function waitForNetMessage() {
+  return new Promise(resolve => {
+    if (wsMessageQueue.length > 0) {
+      resolve(wsMessageQueue.shift());
+    } else {
+      wsMessageResolve = resolve;
+    }
+  });
+}
+
+function netDisconnect() {
+  if (ws) { ws.close(); ws = null; }
+  wsMessageQueue = [];
+  wsMessageResolve = null;
+  setConnStatus('hidden');
+}
+
+// --- Connection Status Indicator ---
+function setConnStatus(status, text) {
+  const el = $('#connStatus');
+  el.className = 'conn-status';
+  if (status === 'hidden') return;
+  el.classList.add('conn-status--visible', `conn-status--${status}`);
+  el.textContent = text || '';
+}
+
+// --- Online Game Helpers ---
+// Sides are ALWAYS 'player'/'ai' in all modes. In online mode:
+//   host = 'player' (first offense), guest = 'ai' (first defense)
+// Only isLocalSide() needs to know the host/guest mapping.
+function isOnline() { return gameMode === 'online'; }
+
+// Is the local player acting as this side?
+function isLocalSide(side) {
+  if (!isOnline()) return side === 'player';
+  // host maps to 'player', guest maps to 'ai'
+  return (playerRole === 'host') ? side === 'player' : side === 'ai';
+}
+
+// Display label for a side
+function sideLabel(side) {
+  if (!isOnline()) return side === 'player' ? 'Player 1' : 'Player 2';
+  return isLocalSide(side) ? 'Player 1' : 'Player 2';
 }
 
 // ============================================================
@@ -618,10 +1078,25 @@ function posLabel(pos) {
          pos === 'cb1' ? 'CB1' : pos === 'cb2' ? 'CB2' : 'DB';
 }
 
+// Returns the position label from the local player's perspective
+// pos is always an offense position (wr1/rb/wr2) since bets track offense slots
+function betPosLabel(pos, state) {
+  const pIsOff = isLocalSide(state.drive.offenseSide);
+  if (pIsOff) return posLabel(pos); // offense player sees WR1, RB, WR2
+  return posLabel(MATCHUPS[pos]);   // defense player sees CB1, DB, CB2
+}
+
 function renderWallets(state) {
   $('.wallet__amount--player').textContent = '$' + state.wallets.player;
   $('.wallet__amount--ai').textContent = '$' + state.wallets.ai;
   $('.wallet__amount--pot').textContent = '$' + state.pot;
+  // Offense/Defense labels swap based on who is on offense this drive
+  const offSide = state && state.drive && state.drive.offenseSide;
+  if (offSide) {
+    const playerIsOff = offSide === 'player';
+    $('.wallet--player .wallet__label').textContent = playerIsOff ? 'Offense Credits' : 'Defense Credits';
+    $('.wallet--ai .wallet__label').textContent = playerIsOff ? 'Defense Credits' : 'Offense Credits';
+  }
 }
 
 function readConfigToState(state) {
@@ -641,6 +1116,7 @@ let configResolve = null;
 
 function applyConfig() {
   if (!state) return;
+  if (isOnline() && playerRole === 'guest') return;
   readConfigToState(state);
   // First game: use startingBalance. Subsequent games: carry over wallets.
   if (persistentWallets === null) {
@@ -843,7 +1319,7 @@ function aiBetOffenseMatchRaise(state) {
 // ============================================================
 // PLAYER BETTING UI
 // ============================================================
-function createMiniCard(card, faceDown) {
+function createMiniCard(card, faceDown, label) {
   const c = el('div','card');
   c.style.cssText = 'width:36px;height:50px;pointer-events:none;';
   if (!faceDown) c.classList.add('card--flipped');
@@ -856,6 +1332,11 @@ function createMiniCard(card, faceDown) {
   front.appendChild(el('div','card__suit',SUIT_SYM[card.suit]));
   inner.appendChild(front);
   c.appendChild(inner);
+  if (faceDown && label) {
+    const overlay = el('div','card__hidden-label');
+    overlay.innerHTML = label + '<br>?';
+    c.appendChild(overlay);
+  }
   return c;
 }
 
@@ -882,24 +1363,24 @@ function waitForDefenseBet(state) {
         const defPos = MATCHUPS[pos];
 
         // Show position labels
-        const lbl = el('div','bet-position__label', posLabel(pos));
+        const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
 
-        // Show defense card (face up for player defense) and offense card (face down)
+        // Both cards face-down with position labels during betting
         const cardArea = el('div','bet-position__card-area');
-        const pIsOff = state.drive.offenseSide === 'player';
+        const pIsOff = isLocalSide(state.drive.offenseSide);
         const defCard = state.down.defensePlacements[defPos];
         const offCard = state.down.offensePlacements[pos];
+        const offLbl = posLabel(pos);
+        const defLbl = posLabel(defPos);
         if (pIsOff) {
-          // Player is offense, AI is defense — player sees their own offense card, defense face-down
-          cardArea.appendChild(createMiniCard(offCard, false));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(defCard, true));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
         } else {
-          // Player is defense — sees their defense card, offense face-down
-          cardArea.appendChild(createMiniCard(defCard, false));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(offCard, true));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
         }
         row.appendChild(cardArea);
 
@@ -909,7 +1390,7 @@ function waitForDefenseBet(state) {
         const amountEl = el('div','bet-controls__amount','$' + bets[pos]);
         const plusBtn = el('button','bet-controls__btn','+');
 
-        const step = Math.max(1, Math.floor(state.buyIn / 2));
+        const step = Math.max(1, Math.floor(state.buyIn / 5));
         minusBtn.addEventListener('click', () => {
           bets[pos] = Math.max(0, bets[pos] - step);
           renderBetUI();
@@ -980,23 +1461,25 @@ function waitForOffenseResponse(state) {
         const row = el('div','bet-position');
         row.style.flexWrap = 'wrap';
 
-        const lbl = el('div','bet-position__label', posLabel(pos));
+        const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
 
-        // Show cards
+        // Both cards face-down with position labels during betting
         const cardArea = el('div','bet-position__card-area');
-        const pIsOff = state.drive.offenseSide === 'player';
+        const pIsOff = isLocalSide(state.drive.offenseSide);
         const defPos = MATCHUPS[pos];
         const defCard = state.down.defensePlacements[defPos];
         const offCard = state.down.offensePlacements[pos];
+        const offLbl = posLabel(pos);
+        const defLbl = posLabel(defPos);
         if (pIsOff) {
-          cardArea.appendChild(createMiniCard(offCard, false));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(defCard, true));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
         } else {
-          cardArea.appendChild(createMiniCard(defCard, false));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(offCard, true));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
         }
         row.appendChild(cardArea);
 
@@ -1038,7 +1521,7 @@ function waitForOffenseResponse(state) {
         if (responses[pos] === 'raise') {
           const raiseRow = el('div','bet-controls');
           raiseRow.style.cssText = 'width:100%;justify-content:center;margin-top:4px;';
-          const step = Math.max(1, Math.floor(state.buyIn / 2));
+          const step = Math.max(1, Math.floor(state.buyIn / 5));
           const minusBtn = el('button','bet-controls__btn','-');
           const amtEl = el('div','bet-controls__amount','$' + raises[pos]);
           const plusBtn = el('button','bet-controls__btn','+');
@@ -1099,7 +1582,7 @@ function waitForDefenseMatch(state) {
       positionsWithRaise.forEach(pos => {
         const raiseAmt = state.bets.raiseAmounts[pos];
         const row = el('div','bet-position');
-        const lbl = el('div','bet-position__label', posLabel(pos));
+        const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
 
         const info = el('div','bet-position__label','Raise: $' + raiseAmt);
@@ -1157,27 +1640,29 @@ function waitForOffenseInitiateBet(state, unbetPositions) {
 
       unbetPositions.forEach(pos => {
         const row = el('div','bet-position');
-        const lbl = el('div','bet-position__label', posLabel(pos));
+        const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
 
         const cardArea = el('div','bet-position__card-area');
-        const pIsOff = state.drive.offenseSide === 'player';
+        const pIsOff = isLocalSide(state.drive.offenseSide);
         const defPos = MATCHUPS[pos];
         const defCard = state.down.defensePlacements[defPos];
         const offCard = state.down.offensePlacements[pos];
+        const offLbl = posLabel(pos);
+        const defLbl = posLabel(defPos);
         if (pIsOff) {
-          cardArea.appendChild(createMiniCard(offCard, false));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(defCard, true));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
         } else {
-          cardArea.appendChild(createMiniCard(defCard, false));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(offCard, true));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
         }
         row.appendChild(cardArea);
 
         const controls = el('div','bet-controls');
-        const step = Math.max(1, Math.floor(state.buyIn / 2));
+        const step = Math.max(1, Math.floor(state.buyIn / 5));
         const minusBtn = el('button','bet-controls__btn','-');
         const amountEl = el('div','bet-controls__amount','$' + bets[pos]);
         const plusBtn = el('button','bet-controls__btn','+');
@@ -1244,22 +1729,24 @@ function waitForDefenseRespondToOffBet(state) {
         const row = el('div','bet-position');
         row.style.flexWrap = 'wrap';
 
-        const lbl = el('div','bet-position__label', posLabel(pos));
+        const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
 
         const cardArea = el('div','bet-position__card-area');
-        const pIsOff = state.drive.offenseSide === 'player';
+        const pIsOff = isLocalSide(state.drive.offenseSide);
         const defPos = MATCHUPS[pos];
         const defCard = state.down.defensePlacements[defPos];
         const offCard = state.down.offensePlacements[pos];
+        const offLbl = posLabel(pos);
+        const defLbl = posLabel(defPos);
         if (!pIsOff) {
-          cardArea.appendChild(createMiniCard(defCard, false));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(offCard, true));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
         } else {
-          cardArea.appendChild(createMiniCard(offCard, false));
+          cardArea.appendChild(createMiniCard(offCard, true, offLbl));
           cardArea.appendChild(el('span','bet-position__vs','vs'));
-          cardArea.appendChild(createMiniCard(defCard, true));
+          cardArea.appendChild(createMiniCard(defCard, true, defLbl));
         }
         row.appendChild(cardArea);
 
@@ -1295,7 +1782,7 @@ function waitForDefenseRespondToOffBet(state) {
         if (responses[pos] === 'raise') {
           const raiseRow = el('div','bet-controls');
           raiseRow.style.cssText = 'width:100%;justify-content:center;margin-top:4px;';
-          const step = Math.max(1, Math.floor(state.buyIn / 2));
+          const step = Math.max(1, Math.floor(state.buyIn / 5));
           const minusBtn = el('button','bet-controls__btn','-');
           const amtEl = el('div','bet-controls__amount','$' + raises[pos]);
           const plusBtn = el('button','bet-controls__btn','+');
@@ -1352,7 +1839,7 @@ function waitForOffenseMatchDefRaise(state) {
       positions.forEach(pos => {
         const raiseAmt = state.bets.offInitDefRaises[pos];
         const row = el('div','bet-position');
-        const lbl = el('div','bet-position__label', posLabel(pos));
+        const lbl = el('div','bet-position__label', betPosLabel(pos, state));
         row.appendChild(lbl);
         const info = el('div','bet-position__label','Raise: $' + raiseAmt);
         info.style.cssText = 'color:var(--accent-orange);min-width:auto;flex:1;';
@@ -1409,88 +1896,58 @@ function resolveCardComparison(state, pos, stake, results) {
   }
 }
 
+// v2 resolveBets — all 3 positions, fold forfeits commitment, matched stake by card compare
 function resolveBets(state) {
   const results = {};
   const offSide = state.drive.offenseSide;
   const defSide = getDefenseSide(state);
-  const passPenalty = Math.max(1, Math.ceil(state.buyIn * 0.1));
+  const b = state.bets;
 
-  for (const pos of state.bets.positions) {
-    const defBet = state.bets.defenseBets[pos] || 0;
-    const offBet = state.bets.offenseBets[pos] || 0;
+  for (const pos of b.positions) {
+    const offAmt = b.offense[pos] || 0;
+    const defAmt = b.defense[pos] || 0;
 
-    // ---- CASE A: Defense initiated a bet ----
-    if (defBet > 0) {
-      const offResp = state.bets.offenseResponses[pos];
-
-      if (offResp === 'pass') {
-        const fee = Math.min(passPenalty, state.wallets[offSide]);
-        state.wallets[offSide] -= fee;
-        state.wallets[defSide] += fee;
-        results[pos] = { winner: defSide, amount: fee, desc: `Offense passed (penalty $${fee})` };
-        continue;
-      }
-
-      if (offResp === 'match') {
-        resolveCardComparison(state, pos, defBet, results);
-        continue;
-      }
-
-      if (offResp === 'raise') {
-        const raiseAmt = state.bets.raiseAmounts[pos];
-        if (state.bets.defenseMatched[pos]) {
-          resolveCardComparison(state, pos, raiseAmt, results);
-        } else {
-          const fee = Math.min(passPenalty, state.wallets[defSide]);
-          state.wallets[defSide] -= fee;
-          state.wallets[offSide] += fee;
-          results[pos] = { winner: offSide, amount: fee, desc: `Defense folded (penalty $${fee})` };
-        }
-        continue;
-      }
-
-      results[pos] = { winner: null, amount: 0, desc: 'No action' };
+    if (b.folded[pos] === 'offense') {
+      const pay = Math.min(offAmt, Math.max(0, state.wallets[offSide]));
+      state.wallets[offSide] -= pay;
+      state.wallets[defSide] += pay;
+      results[pos] = { winner: defSide, amount: pay, desc: `Offense folded — forfeits $${pay}` };
+      continue;
+    }
+    if (b.folded[pos] === 'defense') {
+      const pay = Math.min(defAmt, Math.max(0, state.wallets[defSide]));
+      state.wallets[defSide] -= pay;
+      state.wallets[offSide] += pay;
+      results[pos] = { winner: offSide, amount: pay, desc: `Defense folded — forfeits $${pay}` };
       continue;
     }
 
-    // ---- CASE B: Offense initiated a bet (defense passed initially) ----
-    if (offBet > 0) {
-      const defResp = state.bets.offInitDefResponses[pos];
-
-      if (!defResp || defResp === 'pass') {
-        const fee = Math.min(passPenalty, state.wallets[defSide]);
-        state.wallets[defSide] -= fee;
-        state.wallets[offSide] += fee;
-        results[pos] = { winner: offSide, amount: fee, desc: `Defense passed (penalty $${fee})` };
-        continue;
-      }
-
-      if (defResp === 'match') {
-        resolveCardComparison(state, pos, offBet, results);
-        continue;
-      }
-
-      if (defResp === 'raise') {
-        const raiseAmt = state.bets.offInitDefRaises[pos];
-        if (state.bets.offInitOffMatched && state.bets.offInitOffMatched[pos]) {
-          resolveCardComparison(state, pos, raiseAmt, results);
-        } else {
-          const fee = Math.min(passPenalty, state.wallets[offSide]);
-          state.wallets[offSide] -= fee;
-          state.wallets[defSide] += fee;
-          results[pos] = { winner: defSide, amount: fee, desc: `Offense folded (penalty $${fee})` };
-        }
-        continue;
-      }
-
-      results[pos] = { winner: null, amount: 0, desc: 'No action' };
+    const stake = Math.min(offAmt, defAmt);
+    const offCard = state.down.offensePlacements[pos];
+    const defCard = state.down.defensePlacements[MATCHUPS[pos]];
+    if (!offCard || !defCard) {
+      results[pos] = { winner: null, amount: 0, desc: 'No cards' };
       continue;
     }
 
-    // ---- CASE C: Nobody bet ----
-    results[pos] = { winner: null, amount: 0, desc: 'No bets' };
+    if (offCard.value > defCard.value) {
+      const pay = Math.min(stake, Math.max(0, state.wallets[defSide]));
+      state.wallets[offSide] += pay;
+      state.wallets[defSide] -= pay;
+      results[pos] = { winner: offSide, amount: pay, desc: `${offCard.rank} beats ${defCard.rank}` };
+    } else if (defCard.value > offCard.value) {
+      const pay = Math.min(stake, Math.max(0, state.wallets[offSide]));
+      state.wallets[defSide] += pay;
+      state.wallets[offSide] -= pay;
+      results[pos] = { winner: defSide, amount: pay, desc: `${defCard.rank} beats ${offCard.rank}` };
+    } else {
+      results[pos] = { winner: 'tie', amount: 0, desc: `${offCard.rank} ties ${defCard.rank} — push` };
+    }
   }
-  state.bets.results = results;
+  // Final safety clamp — should never be needed but guarantees no negatives
+  if (state.wallets.player < 0) state.wallets.player = 0;
+  if (state.wallets.ai < 0) state.wallets.ai = 0;
+  b.results = results;
 }
 
 function showBetResults(state) {
@@ -1508,17 +1965,20 @@ function showBetResults(state) {
       const r = results[pos];
       if (!r || r.amount === 0) return;
       const row = el('div','bet-position');
-      const lbl = el('div','bet-position__label', posLabel(pos));
+      const lbl = el('div','bet-position__label', betPosLabel(pos, state));
       row.appendChild(lbl);
 
-      const isPlayerWin = r.winner === 'player';
-      const isAiWin = r.winner === 'ai';
-      const cls = isPlayerWin ? 'bet-result-text bet-result-text--win' :
-                  isAiWin ? 'bet-result-text bet-result-text--loss' :
+      const offSide = state.drive.offenseSide;
+      const defSide = getDefenseSide(state);
+      const isLocalWin = isLocalSide(r.winner);
+      const isLocalLoss = r.winner !== 'tie' && !isLocalWin;
+      const winnerRole = r.winner === offSide ? 'Offense' : 'Defense';
+      const cls = isLocalWin ? 'bet-result-text bet-result-text--win' :
+                  isLocalLoss ? 'bet-result-text bet-result-text--loss' :
                   'bet-result-text bet-result-text--push';
       const txt = r.winner === 'tie' ? r.desc :
-                  isPlayerWin ? `You win $${r.amount}! (${r.desc})` :
-                  `AI wins $${r.amount} (${r.desc})`;
+                  isLocalWin ? `You win $${r.amount}! (${r.desc})` :
+                  `${winnerRole} wins $${r.amount} (${r.desc})`;
       const resEl = el('div', cls, txt);
       resEl.style.flex = '1';
       row.appendChild(resEl);
@@ -1591,7 +2051,7 @@ function renderGameInfo(state) {
   const downText = isGoal
     ? `${ordinal(d.downNumber)} & Goal`
     : `${ordinal(d.downNumber)} & ${yardsLeft}`;
-  const driveLabel = d.offenseSide==='player' ? 'Your Offense' : 'AI Offense';
+  const driveLabel = `${sideLabel(d.offenseSide)} Offense`;
   $('.game-info__drive .game-info__value').textContent = driveLabel;
   $('.game-info__down .game-info__value').textContent = downText;
   $('.game-info__yard .game-info__value').textContent = `${d.yardLine} yd`;
@@ -1610,6 +2070,12 @@ function renderSlotCard(sel, card, showFace, label) {
   }
   const ce = createCardEl(card, !showFace);
   ce.classList.add('card--disabled');
+  if (!showFace) {
+    // Add position label + question mark on face-down cards
+    const overlay = el('div','card__hidden-label');
+    overlay.innerHTML = label + '<br>?';
+    ce.appendChild(overlay);
+  }
   const lb = $('.field__slot-label', slot);
   if (lb) lb.after(ce); else slot.prepend(ce);
 }
@@ -1617,14 +2083,15 @@ function renderSlotCard(sel, card, showFace, label) {
 function renderField(state) {
   const oP = state.down.offensePlacements, dP = state.down.defensePlacements;
   const revealed = ['REVEAL','DICE_ROLL','RESOLVE_DOWN','SHOW_BET_RESULTS'].includes(state.phase);
-  const pIsOff = state.drive.offenseSide==='player';
+  const pIsOff = isLocalSide(state.drive.offenseSide);
 
-  renderSlotCard('.field__slot--cb1', dP.cb1, revealed || !pIsOff, 'CB');
+  // Your own cards: always face-up. Opponent's cards: face-down until reveal.
+  renderSlotCard('.field__slot--cb1', dP.cb1, revealed || !pIsOff, 'CB1');
   renderSlotCard('.field__slot--db', dP.db, revealed || !pIsOff, 'DB');
-  renderSlotCard('.field__slot--cb2', dP.cb2, revealed || !pIsOff, 'CB');
-  renderSlotCard('.field__slot--wr1', oP.wr1, revealed || pIsOff, 'WR');
+  renderSlotCard('.field__slot--cb2', dP.cb2, revealed || !pIsOff, 'CB2');
+  renderSlotCard('.field__slot--wr1', oP.wr1, revealed || pIsOff, 'WR1');
   renderSlotCard('.field__slot--rb', oP.rb, revealed || pIsOff, 'RB');
-  renderSlotCard('.field__slot--wr2', oP.wr2, revealed || pIsOff, 'WR');
+  renderSlotCard('.field__slot--wr2', oP.wr2, revealed || pIsOff, 'WR2');
 
   $$('.rock').forEach(r => r.classList.remove('rock--visible'));
   if (state.down.rockPosition) {
@@ -1632,48 +2099,46 @@ function renderField(state) {
     if (rk) rk.classList.add('rock--visible');
   }
 
-  // Bet badges on non-rock positions
+  // v2 bet badges: show each side's committed amount on each position
   $$('.bet-badge').forEach(b => b.remove());
-  if (state.bets.positions.length > 0) {
-    for (const pos of state.bets.positions) {
-      const defBet = state.bets.defenseBets[pos] || 0;
-      const offBet = state.bets.offenseBets[pos] || 0;
+  $$('.field__slot--folded').forEach(s => s.classList.remove('field__slot--folded'));
+  $$('.field__slot--locked').forEach(s => s.classList.remove('field__slot--locked'));
+  const b = state.bets;
+  if (b && b.positions && b.positions.length > 0) {
+    for (const pos of b.positions) {
+      const offAmt = b.offense[pos] || 0;
+      const defAmt = b.defense[pos] || 0;
       const defPos = MATCHUPS[pos];
 
-      if (defBet > 0) {
-        // Defense-initiated bet badges
-        const offResp = state.bets.offenseResponses[pos];
+      if (offAmt > 0) {
         const offSlot = $(`.field__slot--${pos}`);
         if (offSlot) {
           const badge = el('div','bet-badge');
-          if (offResp === 'pass') { badge.classList.add('bet-badge--pass'); badge.textContent = 'Pass'; }
-          else if (offResp === 'raise') { badge.classList.add('bet-badge--raise'); badge.textContent = '$' + (state.bets.raiseAmounts[pos] || defBet); }
-          else { badge.textContent = '$' + defBet; }
+          if (b.folded[pos] === 'offense') {
+            badge.classList.add('bet-badge--pass'); badge.textContent = 'Fold';
+            offSlot.classList.add('field__slot--folded');
+          } else if (b.offStay[pos]) {
+            badge.classList.add('bet-badge--locked'); badge.textContent = '$' + offAmt + ' \u2713';
+            offSlot.classList.add('field__slot--locked');
+          } else {
+            badge.textContent = '$' + offAmt;
+          }
           offSlot.appendChild(badge);
         }
+      }
+      if (defAmt > 0) {
         const defSlot = $(`.field__slot--${defPos}`);
         if (defSlot) {
           const dbadge = el('div','bet-badge');
-          if (offResp === 'raise' && state.bets.defenseMatched[pos] === false) { dbadge.classList.add('bet-badge--pass'); dbadge.textContent = 'Fold'; }
-          else { dbadge.textContent = '$' + defBet; }
-          defSlot.appendChild(dbadge);
-        }
-      } else if (offBet > 0) {
-        // Offense-initiated bet badges
-        const defResp = state.bets.offInitDefResponses[pos];
-        const offSlot = $(`.field__slot--${pos}`);
-        if (offSlot) {
-          const badge = el('div','bet-badge');
-          badge.textContent = '$' + offBet;
-          offSlot.appendChild(badge);
-        }
-        const defSlot = $(`.field__slot--${defPos}`);
-        if (defSlot) {
-          const dbadge = el('div','bet-badge');
-          if (defResp === 'pass') { dbadge.classList.add('bet-badge--pass'); dbadge.textContent = 'Pass'; }
-          else if (defResp === 'raise') { dbadge.classList.add('bet-badge--raise'); dbadge.textContent = '$' + (state.bets.offInitDefRaises[pos] || offBet); }
-          else if (defResp === 'match') { dbadge.textContent = '$' + offBet; }
-          else { dbadge.textContent = '$' + offBet; }
+          if (b.folded[pos] === 'defense') {
+            dbadge.classList.add('bet-badge--pass'); dbadge.textContent = 'Fold';
+            defSlot.classList.add('field__slot--folded');
+          } else if (b.defStay[pos]) {
+            dbadge.classList.add('bet-badge--locked'); dbadge.textContent = '$' + defAmt + ' \u2713';
+            defSlot.classList.add('field__slot--locked');
+          } else {
+            dbadge.textContent = '$' + defAmt;
+          }
           defSlot.appendChild(dbadge);
         }
       }
@@ -1766,7 +2231,7 @@ function renderHand(cards, state) {
   hc.innerHTML = '';
   selectedIdx = null;
   const placing = state.phase==='OFFENSE_PLACE_CARDS'||state.phase==='DEFENSE_PLACE_CARDS';
-  const pIsOff = state.drive.offenseSide==='player';
+  const pIsOff = isLocalSide(state.drive.offenseSide);
   cards.forEach((card,i) => {
     const ce = createCardEl(card, false);
     if (placing) {
@@ -1783,7 +2248,7 @@ function renderHand(cards, state) {
 
 function highlightSlots(state) {
   clearSlotHL();
-  const pIsOff = state.drive.offenseSide==='player';
+  const pIsOff = isLocalSide(state.drive.offenseSide);
   const pl = pIsOff ? state.down.offensePlacements : state.down.defensePlacements;
   const pos = pIsOff ? ['wr1','rb','wr2'] : ['cb1','db','cb2'];
   pos.forEach(p => { if (!pl[p]) { const s=$(`.field__slot--${p} .card-slot`); if(s) s.classList.add('card-slot--highlight'); }});
@@ -1793,7 +2258,7 @@ function clearSlotHL() { $$('.card-slot--highlight').forEach(e=>e.classList.remo
 
 function waitForPlacement(state, handCards) {
   return new Promise(resolve => {
-    const pIsOff = state.drive.offenseSide==='player';
+    const pIsOff = isLocalSide(state.drive.offenseSide);
     const pl = pIsOff ? state.down.offensePlacements : state.down.defensePlacements;
     const pos = pIsOff ? ['wr1','rb','wr2'] : ['cb1','db','cb2'];
 
@@ -1914,9 +2379,15 @@ function restartGame() {
   gameId++;
   // Clear overlay
   $('.message-overlay').classList.remove('message-overlay--visible');
+  netDisconnect();
   setTimeout(() => {
     gameAborted = false;
-    startGame();
+    gameMode = 'ai';
+    playerRole = null;
+    roomCode = null;
+    onlineConfig = null;
+    $('.config-bar').style.display = '';
+    showModeSelect();
   }, 50);
 }
 
@@ -1932,7 +2403,26 @@ function createState() {
     buyIn:10,
     startingBalance:100,
     pot:0,
-    bets:{ positions:[], defenseBets:{}, offenseResponses:{}, raiseAmounts:{}, defenseMatched:{}, results:{} },
+    bets: makeBetsState(),
+  };
+}
+
+function makeBetsState() {
+  return {
+    positions: ['wr1','rb','wr2'],
+    minBet: 1,
+    // Committed amounts per side, per position (grows via raise/match)
+    offense: { wr1:0, rb:0, wr2:0 },
+    defense: { wr1:0, rb:0, wr2:0 },
+    // "Stay" flag per side: once set, that side won't raise further this position
+    offStay: { wr1:false, rb:false, wr2:false },
+    defStay: { wr1:false, rb:false, wr2:false },
+    // Fold records: null | 'offense' | 'defense'
+    folded: { wr1:null, rb:null, wr2:null },
+    // Track raise counts to enforce hard cap (safety)
+    raiseCount: { wr1:0, rb:0, wr2:0 },
+    maxRaises: 6,
+    results: {},
   };
 }
 
@@ -1945,7 +2435,7 @@ function resetDown(s) {
   s.down.offensePlacements={wr1:null,rb:null,wr2:null};
   s.down.defensePlacements={cb1:null,db:null,cb2:null};
   s.down.rockPosition=null; s.down.offenseDice=null; s.down.defenseDice=null; s.down.result=null;
-  s.bets={ positions:[], defenseBets:{}, offenseResponses:{}, raiseAmounts:{}, defenseMatched:{}, offenseBets:{}, offInitDefResponses:{}, offInitDefRaises:{}, offInitOffMatched:{}, results:{} };
+  s.bets = makeBetsState();
 }
 
 function ensureDeck(s, n) {
@@ -1955,248 +2445,629 @@ function ensureDeck(s, n) {
   }
 }
 
+// ============================================================
+// v2 AI — card-strength based logic
+// ============================================================
+function _v2MaxBet(state) { return state.buyIn * 2; }
+function _v2Step(state) { return Math.max(1, Math.floor(state.buyIn / 5)); }
+
+// Offense sets initial bets: scale from min to max by card strength
+function aiOffenseInitialBetsV2(state) {
+  const b = state.bets;
+  const side = state.drive.offenseSide;
+  const wallet = state.wallets[side];
+  const maxBet = _v2MaxBet(state);
+  let spent = 0;
+  b.positions.forEach(p => {
+    const card = state.down.offensePlacements[p];
+    const str = card ? getCardStrength(card.value) : 0;
+    let amt = Math.round(b.minBet + (maxBet - b.minBet) * str);
+    amt = Math.max(b.minBet, Math.min(maxBet, amt));
+    amt = Math.min(amt, Math.max(b.minBet, wallet - spent));
+    b.offense[p] = amt;
+    b.offStay[p] = true; // initial bet locks offense side
+    spent += amt;
+  });
+}
+
+// Defense response: evaluate own card vs offense bet, decide per position
+function aiDefenseRespondV2(state) {
+  const b = state.bets;
+  const defSide = getDefenseSide(state);
+  const wallet = state.wallets[defSide];
+  const maxBet = _v2MaxBet(state);
+  let spent = 0;
+  b.positions.forEach(p => {
+    const offCard = state.down.offensePlacements[p];
+    const defCard = state.down.defensePlacements[MATCHUPS[p]];
+    const defStr = defCard ? getCardStrength(defCard.value) : 0;
+    const offAmt = b.offense[p] || b.minBet;
+    const budget = Math.max(0, wallet - spent);
+
+    if (defStr < 0.25 && offAmt > b.minBet) {
+      // Weak card + real bet → fold (keep min ante at risk only)
+      b.defense[p] = b.minBet;
+      b.folded[p] = 'defense';
+      spent += b.minBet;
+      return;
+    }
+    if (defStr > 0.7 && budget >= offAmt * 2) {
+      // Strong → raise
+      const raise = Math.min(maxBet, offAmt * 2, budget);
+      b.defense[p] = raise;
+      spent += raise;
+      return;
+    }
+    // Otherwise match and stay
+    const matched = Math.min(offAmt, budget);
+    b.defense[p] = matched;
+    b.defStay[p] = true;
+    b.offStay[p] = true; // if def matches and stays, and off hasn't raised back, lock
+    spent += matched;
+  });
+}
+
+function aiOffenseCounterV2(state, positions) {
+  const b = state.bets;
+  const offSide = state.drive.offenseSide;
+  const wallet = state.wallets[offSide];
+  const maxBet = _v2MaxBet(state);
+  let spent = 0;
+  b.positions.forEach(p => { spent += b.offense[p] || 0; });
+  positions.forEach(p => {
+    const card = state.down.offensePlacements[p];
+    const str = card ? getCardStrength(card.value) : 0;
+    const defAmt = b.defense[p];
+    const diff = defAmt - b.offense[p];
+    const budget = Math.max(0, wallet - spent);
+
+    if (budget < diff) {
+      // Can't afford match → fold
+      b.folded[p] = 'offense';
+      return;
+    }
+    if (str < 0.3) {
+      // Weak → fold
+      b.folded[p] = 'offense';
+      return;
+    }
+    if (str > 0.75 && budget >= diff * 2 && b.raiseCount[p] < b.maxRaises) {
+      const raise = Math.min(maxBet, defAmt * 2, wallet - spent + b.offense[p]);
+      spent += raise - b.offense[p];
+      b.offense[p] = raise;
+      b.raiseCount[p]++;
+      return;
+    }
+    // Match and stay
+    spent += diff;
+    b.offense[p] = defAmt;
+    b.offStay[p] = true;
+  });
+}
+
+function aiDefenseCounterV2(state, positions) {
+  const b = state.bets;
+  const defSide = getDefenseSide(state);
+  const wallet = state.wallets[defSide];
+  const maxBet = _v2MaxBet(state);
+  let spent = 0;
+  b.positions.forEach(p => { spent += b.defense[p] || 0; });
+  positions.forEach(p => {
+    const card = state.down.defensePlacements[MATCHUPS[p]];
+    const str = card ? getCardStrength(card.value) : 0;
+    const offAmt = b.offense[p];
+    const diff = offAmt - b.defense[p];
+    const budget = Math.max(0, wallet - spent);
+
+    if (budget < diff) { b.folded[p] = 'defense'; return; }
+    if (str < 0.3) { b.folded[p] = 'defense'; return; }
+    if (str > 0.75 && budget >= diff * 2 && b.raiseCount[p] < b.maxRaises) {
+      const raise = Math.min(maxBet, offAmt * 2, wallet - spent + b.defense[p]);
+      spent += raise - b.defense[p];
+      b.defense[p] = raise;
+      b.raiseCount[p]++;
+      return;
+    }
+    spent += diff;
+    b.defense[p] = offAmt;
+    b.defStay[p] = true;
+  });
+}
+
+// ============================================================
+// v2 PLAYER BETTING PANELS
+// ============================================================
+
+// Mini helper: render a face-down matchup card area (both sides hidden during betting)
+function _v2CardArea(state, pos) {
+  const cardArea = el('div','bet-position__card-area');
+  const pIsOff = isLocalSide(state.drive.offenseSide);
+  const defPos = MATCHUPS[pos];
+  const defCard = state.down.defensePlacements[defPos];
+  const offCard = state.down.offensePlacements[pos];
+  const offLbl = posLabel(pos);
+  const defLbl = posLabel(defPos);
+  if (pIsOff) {
+    if (offCard) cardArea.appendChild(createMiniCard(offCard, true, offLbl));
+    cardArea.appendChild(el('span','bet-position__vs','vs'));
+    if (defCard) cardArea.appendChild(createMiniCard(defCard, true, defLbl));
+    else cardArea.appendChild(el('span','bet-position__label','?'));
+  } else {
+    if (defCard) cardArea.appendChild(createMiniCard(defCard, true, defLbl));
+    else cardArea.appendChild(el('span','bet-position__label','?'));
+    cardArea.appendChild(el('span','bet-position__vs','vs'));
+    if (offCard) cardArea.appendChild(createMiniCard(offCard, true, offLbl));
+  }
+  return cardArea;
+}
+
+// Phase 3: Offense sets initial bets on all 3 positions
+function waitForOffenseInitialBetsV2(state) {
+  return new Promise(resolve => {
+    const b = state.bets;
+    const side = state.drive.offenseSide;
+    const wallet = state.wallets[side];
+    const maxBet = _v2MaxBet(state);
+    const step = _v2Step(state);
+    // Init at min ante (but cap if wallet can't afford 3x min)
+    const minAffordable = Math.max(0, Math.floor(wallet / b.positions.length));
+    const startAmt = Math.min(b.minBet, minAffordable);
+    b.positions.forEach(p => { if ((b.offense[p] || 0) < startAmt) b.offense[p] = startAmt; });
+
+    showBettingPanel();
+    const container = $('.betting-panel__positions');
+    $('.betting-panel__title').textContent = 'Place Your Offense Bets';
+
+    function render() {
+      container.innerHTML = '';
+      let total = 0;
+      b.positions.forEach(p => total += b.offense[p]);
+      const remaining = wallet - total;
+
+      b.positions.forEach(pos => {
+        const row = el('div','bet-position');
+        row.appendChild(el('div','bet-position__label', betPosLabel(pos, state)));
+        row.appendChild(_v2CardArea(state, pos));
+
+        const controls = el('div','bet-controls');
+        const minusBtn = el('button','bet-controls__btn','-');
+        const amountEl = el('div','bet-controls__amount','$' + b.offense[pos]);
+        const plusBtn = el('button','bet-controls__btn','+');
+        minusBtn.addEventListener('click', () => {
+          b.offense[pos] = Math.max(b.minBet, b.offense[pos] - step);
+          render();
+        });
+        plusBtn.addEventListener('click', () => {
+          const avail = remaining + b.offense[pos];
+          b.offense[pos] = Math.min(maxBet, avail, b.offense[pos] + step);
+          render();
+        });
+        controls.appendChild(minusBtn);
+        controls.appendChild(amountEl);
+        controls.appendChild(plusBtn);
+        row.appendChild(controls);
+        container.appendChild(row);
+      });
+
+      const info = el('div','bet-position__label',
+        `Total: $${total} | Remaining: $${remaining} | Min $${b.minBet} · Max $${maxBet}`);
+      info.style.cssText = 'flex:1;color:var(--text-secondary);font-size:0.6rem;';
+      container.appendChild(info);
+
+      setActionBtn('Confirm Offense Bets', true, () => {
+        // Initial bets lock offense side (they've set their stake); defense reacts next.
+        b.positions.forEach(p => { b.offStay[p] = true; });
+        hideBettingPanel();
+        resolve();
+      });
+    }
+    render();
+  });
+}
+
+// Generic responder panel: shown to the side that's reacting to opponent's bets.
+// `actorSide` is the side this panel is for ('offense' or 'defense').
+// `positions` = subset to act on (all 3 for first response, raised-only for counters).
+function _v2RespondPanel(state, actorSide, positions, title) {
+  return new Promise(resolve => {
+    const b = state.bets;
+    const isOffActor = actorSide === 'offense';
+    const walletSide = isOffActor ? state.drive.offenseSide : getDefenseSide(state);
+    const wallet = state.wallets[walletSide];
+    const maxBet = _v2MaxBet(state);
+    const step = _v2Step(state);
+
+    // Per-position action: 'match' | 'raise' | 'stay' | 'fold' | null (undecided)
+    const action = {};
+    const raiseAmt = {};
+    positions.forEach(p => { action[p] = null; raiseAmt[p] = 0; });
+
+    showBettingPanel();
+    const container = $('.betting-panel__positions');
+    $('.betting-panel__title').textContent = title;
+    // Helper hint row showing action legend
+    const legend = el('div','bet-position__label',
+      'Match: pay up · Raise: push higher · Stay: lock, card wins decide · Fold: forfeit your $ now');
+    legend.style.cssText = 'flex:1;color:var(--text-secondary);font-size:0.55rem;text-align:center;padding:2px 0 6px;';
+
+    // Helper: how much I'm already committed across all positions
+    function myCurrentCommit() {
+      let s = 0;
+      b.positions.forEach(p => { s += (isOffActor ? b.offense[p] : b.defense[p]) || 0; });
+      return s;
+    }
+
+    // Helper: how much this panel's pending decision would add above current commit
+    function pendingDelta() {
+      let d = 0;
+      positions.forEach(p => {
+        const myAmt = isOffActor ? b.offense[p] : b.defense[p];
+        const oppAmt = isOffActor ? b.defense[p] : b.offense[p];
+        if (action[p] === 'match' || action[p] === 'stay') d += Math.max(0, oppAmt - myAmt);
+        else if (action[p] === 'raise') d += Math.max(0, raiseAmt[p] - myAmt);
+      });
+      return d;
+    }
+
+    function render() {
+      container.innerHTML = '';
+      container.appendChild(legend);
+      const committed = myCurrentCommit();
+      const delta = pendingDelta();
+      const available = wallet - committed - delta;
+
+      positions.forEach(pos => {
+        const row = el('div','bet-position');
+        row.style.flexWrap = 'wrap';
+        row.appendChild(el('div','bet-position__label', betPosLabel(pos, state)));
+        row.appendChild(_v2CardArea(state, pos));
+
+        const myAmt = isOffActor ? b.offense[pos] : b.defense[pos];
+        const oppAmt = isOffActor ? b.defense[pos] : b.offense[pos];
+        const diff = Math.max(0, oppAmt - myAmt);
+
+        const info = el('div','bet-position__label',
+          `You $${myAmt} · Them $${oppAmt}`);
+        info.style.cssText = 'color:var(--text-gold);min-width:auto;flex:1;font-size:0.6rem;';
+        row.appendChild(info);
+
+        const btns = el('div','bet-response-btns');
+        const matchBtn = el('button','bet-response-btn bet-response-btn--match', diff > 0 ? `Match +$${diff}` : 'Match');
+        const raiseBtn = el('button','bet-response-btn bet-response-btn--raise','Raise');
+        const stayBtn  = el('button','bet-response-btn','Stay');
+        const foldBtn  = el('button','bet-response-btn bet-response-btn--pass','Fold');
+
+        if (action[pos] === 'match') matchBtn.classList.add('bet-response-btn--active');
+        if (action[pos] === 'raise') raiseBtn.classList.add('bet-response-btn--active');
+        if (action[pos] === 'stay')  stayBtn.classList.add('bet-response-btn--active');
+        if (action[pos] === 'fold')  foldBtn.classList.add('bet-response-btn--active');
+
+        // Match disabled if can't afford the diff
+        const canMatch = available >= (diff - (action[pos]==='match' ? diff : 0));
+        if (!canMatch) { matchBtn.disabled = true; matchBtn.style.opacity = '0.5'; }
+        // Stay also has to afford the diff (since stay will match up)
+        const canStay = available >= (diff - (action[pos]==='stay' ? diff : 0));
+        if (!canStay) { stayBtn.disabled = true; stayBtn.style.opacity = '0.5'; }
+
+        matchBtn.addEventListener('click', () => { action[pos] = 'match'; raiseAmt[pos] = oppAmt; render(); });
+        stayBtn .addEventListener('click', () => {
+          if (!canStay) return;
+          // Stay = accept current amount (if behind, match first)
+          action[pos] = 'stay'; raiseAmt[pos] = Math.max(myAmt, oppAmt); render();
+        });
+        foldBtn .addEventListener('click', () => { action[pos] = 'fold'; raiseAmt[pos] = 0; render(); });
+        raiseBtn.addEventListener('click', () => {
+          action[pos] = 'raise';
+          // Default raise: +1 step above opponent (or opp*2 minimum)
+          const minRaise = Math.max(oppAmt + step, myAmt + step);
+          const budget = wallet - myCurrentCommit() + myAmt;
+          raiseAmt[pos] = Math.min(maxBet, Math.max(minRaise, raiseAmt[pos] || minRaise), budget);
+          render();
+        });
+        btns.appendChild(matchBtn);
+        btns.appendChild(raiseBtn);
+        btns.appendChild(stayBtn);
+        btns.appendChild(foldBtn);
+        row.appendChild(btns);
+
+        // Raise amount controls
+        if (action[pos] === 'raise') {
+          const raiseRow = el('div','bet-controls');
+          raiseRow.style.cssText = 'width:100%;justify-content:center;margin-top:4px;';
+          const minusBtn = el('button','bet-controls__btn','-');
+          const amtEl = el('div','bet-controls__amount','$' + raiseAmt[pos]);
+          const plusBtn = el('button','bet-controls__btn','+');
+          const minRaise = oppAmt + step;
+          minusBtn.addEventListener('click', () => {
+            raiseAmt[pos] = Math.max(minRaise, raiseAmt[pos] - step);
+            render();
+          });
+          plusBtn.addEventListener('click', () => {
+            const budget = wallet - myCurrentCommit() + myAmt;
+            raiseAmt[pos] = Math.min(maxBet, budget, raiseAmt[pos] + step);
+            render();
+          });
+          raiseRow.appendChild(minusBtn);
+          raiseRow.appendChild(amtEl);
+          raiseRow.appendChild(plusBtn);
+          row.appendChild(raiseRow);
+        }
+
+        container.appendChild(row);
+      });
+
+      const summary = el('div','bet-position__label',
+        `Committed: $${committed + delta} | Wallet: $${wallet}`);
+      summary.style.cssText = 'flex:1;color:var(--text-secondary);font-size:0.6rem;';
+      container.appendChild(summary);
+
+      const allDecided = positions.every(p => action[p] !== null);
+      setActionBtn(allDecided ? 'Confirm' : 'Decide each position...', allDecided, allDecided ? () => {
+        // Apply decisions to state.bets
+        positions.forEach(pos => {
+          const myAmt = isOffActor ? b.offense[pos] : b.defense[pos];
+          const oppAmt = isOffActor ? b.defense[pos] : b.offense[pos];
+          if (action[pos] === 'fold') {
+            b.folded[pos] = actorSide;
+          } else if (action[pos] === 'match') {
+            // Match = accept current amount and lock my side
+            if (isOffActor) { b.offense[pos] = oppAmt; b.offStay[pos] = true; }
+            else { b.defense[pos] = oppAmt; b.defStay[pos] = true; }
+          } else if (action[pos] === 'stay') {
+            // Stay locks this side. Also must match if behind.
+            if (isOffActor) { b.offense[pos] = Math.max(myAmt, oppAmt); b.offStay[pos] = true; }
+            else { b.defense[pos] = Math.max(myAmt, oppAmt); b.defStay[pos] = true; }
+          } else if (action[pos] === 'raise') {
+            if (isOffActor) b.offense[pos] = raiseAmt[pos];
+            else b.defense[pos] = raiseAmt[pos];
+            b.raiseCount[pos] = (b.raiseCount[pos] || 0) + 1;
+            // Raising un-stays the opponent (they get a chance to react again)
+            if (isOffActor) b.defStay[pos] = false; else b.offStay[pos] = false;
+          }
+        });
+        hideBettingPanel();
+        resolve();
+      } : null);
+    }
+    render();
+  });
+}
+
+// Phase 5: Defense first response (all 3 positions)
+function waitForDefenseRespondV2(state) {
+  return _v2RespondPanel(state, 'defense', state.bets.positions.slice(), 'Respond to Offense Bets');
+}
+
+// Counter-raise panels (only raised positions passed in)
+function waitForOffenseCounterV2(state, positions) {
+  return _v2RespondPanel(state, 'offense', positions, 'Defense Raised — Your Turn');
+}
+function waitForDefenseCounterV2(state, positions) {
+  return _v2RespondPanel(state, 'defense', positions, 'Offense Raised — Your Turn');
+}
+
+// ============================================================
+// v2 executeDown — NEW FLOW
+// 1. Offense places cards
+// 2. Offense sets initial bets (all 3 positions, min ante $1)
+// 3. Defense places cards
+// 4. Betting loop: defense responds → offense counters → defense counters
+//    until both stay / match / fold on every position
+// 5. Offense picks the rock (reveal of intended play)
+// 6. Reveal cards, dice if pass, resolve yards + side bets
+// ============================================================
 async function executeDown(state, offCards, defCards, myId) {
-  const pIsOff = state.drive.offenseSide==='player';
+  const offSide = state.drive.offenseSide;
+  const defSide = getDefenseSide(state);
+  const pIsOff = isLocalSide(offSide);
   hideResult(); hideDiceArea(); renderGameInfo(state);
 
+  if (isOnline()) {
+    // Online disabled in v2 redesign for now — will be reintroduced later
+    throw new Error('Online mode is temporarily disabled during v2 redesign');
+  }
+
+  // ---- Phase 1: Offense places cards (no rock yet) ----
+  state.phase = 'OFFENSE_PLACE_CARDS';
+  state.down.offensePlacements = {wr1:null, rb:null, wr2:null};
+  state.down.defensePlacements = {cb1:null, db:null, cb2:null};
+  state.down.rockPosition = null;
+  renderField(state);
+
   if (pIsOff) {
-    // Player picks 3 from their full offensive hand
-    state.phase='OFFENSE_PLACE_CARDS';
     setInstruction(`Place 3 of your ${offCards.length} cards on the field (tap card, then tap position)`);
-    state.down.offensePlacements={wr1:null,rb:null,wr2:null};
-    renderField(state);
     renderHand(offCards, state);
+    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+      await tutorialShow('.hand', 'These are your <b>cards</b>. Higher values are stronger. Tap a card to select it, then tap a field position to place it.', 'down');
+      await tutorialShow('.field', 'Place cards on <b>WR1</b>, <b>RB</b>, and <b>WR2</b>. Each offense position is matched against a defender. You will pick the rock (the play that counts for yards) <b>after</b> all bets are in.', 'down');
+    }
     await waitForPlacement(state, offCards);
     checkAbort(myId);
-
-    state.phase='PLACE_ROCK';
-    setInstruction('Place the rock: tap RB (Run) or a WR (Pass)');
-    await waitForRock(state);
-    checkAbort(myId);
-
-    // AI picks best 3 from its full defensive hand (removes them internally)
-    state.phase='DEFENSE_PLACE_CARDS';
-    setInstruction('Defense is setting up...');
-    renderHand([], state);
-    await sleep(600);
-    checkAbort(myId);
-    state.down.defensePlacements = aiPlaceDefense(defCards);
   } else {
-    // AI picks best 3 from its full offensive hand (removes them internally)
-    state.phase='OFFENSE_PLACE_CARDS';
     setInstruction('AI is setting up their offense...');
-    state.down.offensePlacements={wr1:null,rb:null,wr2:null};
-    renderField(state);
+    renderHand([], state);
     await sleep(600);
     checkAbort(myId);
     const aiOff = aiPlaceOffense(offCards);
     state.down.offensePlacements = aiOff.placements;
-    state.down.rockPosition = aiOff.rockPosition;
+    // Note: rock not set yet in v2 — AI picks it later
     renderField(state);
+  }
 
-    // Player picks 3 from their full defensive hand
-    state.phase='DEFENSE_PLACE_CARDS';
+  // ---- Phase 2: Set up betting state, auto-ante min on all 3 positions ----
+  state.bets = makeBetsState();
+  const positions = state.bets.positions;
+  const minBet = state.bets.minBet;
+  const maxBet = state.buyIn * 2;
+
+  // Auto-ante: both sides put min on every position
+  positions.forEach(p => {
+    state.bets.offense[p] = minBet;
+    state.bets.defense[p] = minBet;
+  });
+  renderField(state);
+
+  // ---- Phase 3: Offense sets initial bets (can raise above min on any position) ----
+  state.phase = 'OFFENSE_INITIAL_BETS';
+  if (pIsOff) {
+    setInstruction('Set your offense bets (min $' + minBet + ', max $' + maxBet + ')');
+    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+      await tutorialShow('.phase-instruction', 'Set your bets on <b>all three matchups</b>. Min is $' + minBet + ' (auto-ante). The defense will see your bets before placing their cards.', 'up');
+    }
+    await waitForOffenseInitialBetsV2(state);
+    checkAbort(myId);
+  } else {
+    setInstruction('AI offense is placing bets...');
+    await sleep(600);
+    checkAbort(myId);
+    aiOffenseInitialBetsV2(state);
+  }
+  renderField(state);
+
+  // ---- Phase 4: Defense places cards (sees offense bets) ----
+  state.phase = 'DEFENSE_PLACE_CARDS';
+  if (!pIsOff) {
     setInstruction(`Place 3 of your ${defCards.length} cards on defense (tap card, then tap position)`);
-    state.down.defensePlacements={cb1:null,db:null,cb2:null};
-    renderField(state);
     renderHand(defCards, state);
+    if (state.driveNumber === 2 && state.drive.downNumber === 1) {
+      await tutorialShow('.hand', 'Now you\'re on <b>defense</b>! The offense has already placed bets — use that info. Big bets = they feel confident about that matchup.', 'down');
+    }
     await waitForPlacement(state, defCards);
     checkAbort(myId);
-  }
-
-  // === BETTING SEQUENCE ===
-  const nonRockPos = getNonRockPositions(state.down.rockPosition);
-  state.bets.positions = nonRockPos;
-
-  const offSide = state.drive.offenseSide;
-  const defSide = getDefenseSide(state);
-  const canBet = state.wallets[offSide] > 0 || state.wallets[defSide] > 0;
-
-  if (canBet) {
-    // ---- ROUND 1: Defense bets first ----
-    state.phase = 'DEFENSE_BET';
+  } else {
+    setInstruction('AI defense is setting up...');
+    renderHand([], state);
+    await sleep(600);
+    checkAbort(myId);
+    state.down.defensePlacements = aiPlaceDefense(defCards);
     renderField(state);
-    if (defSide === 'ai') {
-      setInstruction('AI defense is placing side bets...');
-      await sleep(600);
-      checkAbort(myId);
-      state.bets.defenseBets = aiBetAsDefense(state);
+  }
+
+  // ---- Phase 5: Betting loop — defense responds, then ping-pong raises until lock ----
+  // Initial defense response to offense bets
+  state.phase = 'DEFENSE_RESPOND';
+  if (pIsOff) {
+    setInstruction('AI defense is responding to your bets...');
+    await sleep(600);
+    checkAbort(myId);
+    aiDefenseRespondV2(state);
+  } else {
+    setInstruction('Respond to offense bets: Match / Raise / Stay / Fold');
+    renderHand([], state);
+    await waitForDefenseRespondV2(state);
+    checkAbort(myId);
+  }
+  renderField(state);
+
+  // Counter-raise loop: runs until all positions locked (both stayed/matched or someone folded)
+  let safety = 0;
+  while (!allBetsLockedV2(state) && safety < 10) {
+    safety++;
+    const raisedByDef = positions.filter(p => !state.bets.folded[p] && state.bets.defense[p] > state.bets.offense[p]);
+    const raisedByOff = positions.filter(p => !state.bets.folded[p] && state.bets.offense[p] > state.bets.defense[p]);
+
+    if (raisedByDef.length > 0) {
+      // Offense must respond to defense's raises
+      state.phase = 'OFFENSE_COUNTER';
+      if (pIsOff) {
+        setInstruction('Defense raised — Match / Raise / Stay / Fold');
+        renderHand([], state);
+        await waitForOffenseCounterV2(state, raisedByDef);
+        checkAbort(myId);
+      } else {
+        setInstruction('AI offense is countering...');
+        await sleep(600);
+        checkAbort(myId);
+        aiOffenseCounterV2(state, raisedByDef);
+      }
       renderField(state);
-      const betSummary = nonRockPos.map(p => `${posLabel(p)}: $${state.bets.defenseBets[p]}`).join(', ');
-      if (nonRockPos.some(p => state.bets.defenseBets[p] > 0)) {
-        await showMessage('AI Side Bets', `Defense bets: ${betSummary}`, 'Respond');
+    } else if (raisedByOff.length > 0) {
+      // Defense must respond to offense's (counter-)raises
+      state.phase = 'DEFENSE_COUNTER';
+      if (pIsOff) {
+        setInstruction('AI defense is countering...');
+        await sleep(600);
+        checkAbort(myId);
+        aiDefenseCounterV2(state, raisedByOff);
+      } else {
+        setInstruction('Offense raised — Match / Raise / Stay / Fold');
+        renderHand([], state);
+        await waitForDefenseCounterV2(state, raisedByOff);
         checkAbort(myId);
       }
+      renderField(state);
     } else {
-      setInstruction('Place your defense side bets on the non-rock cards');
-      renderHand([], state);
-      await waitForDefenseBet(state);
-      checkAbort(myId);
-      renderField(state);
-    }
-
-    // Positions where defense bet vs didn't
-    const defBetPositions = nonRockPos.filter(p => (state.bets.defenseBets[p] || 0) > 0);
-    const unbetPositions = nonRockPos.filter(p => (state.bets.defenseBets[p] || 0) === 0);
-
-    // ---- ROUND 1b: Offense responds to defense bets (only on positions defense bet on) ----
-    nonRockPos.forEach(p => { state.bets.offenseResponses[p] = 'pass'; state.bets.raiseAmounts[p] = 0; });
-    if (defBetPositions.length > 0) {
-      state.phase = 'OFFENSE_RESPOND';
-      if (offSide === 'ai') {
-        const aiResp = aiBetAsOffenseResponse(state);
-        state.bets.offenseResponses = aiResp.responses;
-        state.bets.raiseAmounts = aiResp.raises;
-        const anyAction = defBetPositions.some(p => aiResp.responses[p] !== 'pass');
-        if (anyAction) {
-          setInstruction('AI offense is responding...');
-          await sleep(600);
-          checkAbort(myId);
-          const respSummary = defBetPositions
-            .map(p => `${posLabel(p)}: ${aiResp.responses[p]}${aiResp.responses[p]==='raise'?' $'+aiResp.raises[p]:''}`).join(', ');
-          await showMessage('AI Response', respSummary, 'Continue');
-          checkAbort(myId);
-        }
-        renderField(state);
-      } else {
-        setInstruction('Respond to defense side bets');
-        renderHand([], state);
-        await waitForOffenseResponse(state);
-        checkAbort(myId);
-        renderField(state);
-      }
-
-      // Defense matches raises if any
-      const hasRaises = defBetPositions.some(p => state.bets.offenseResponses[p] === 'raise');
-      if (hasRaises) {
-        state.phase = 'DEFENSE_MATCH';
-        if (defSide === 'ai') {
-          state.bets.defenseMatched = aiBetDefenseMatch(state);
-          const matchSummary = defBetPositions.filter(p => state.bets.offenseResponses[p]==='raise')
-            .map(p => `${posLabel(p)}: ${state.bets.defenseMatched[p]?'matched':'passed'}`).join(', ');
-          setInstruction('AI defense deciding on raises...');
-          await sleep(600);
-          checkAbort(myId);
-          await showMessage('AI Match Decision', matchSummary, 'Continue');
-          checkAbort(myId);
-        } else {
-          setInstruction('Offense raised! Match or pass?');
-          renderHand([], state);
-          await waitForDefenseMatch(state);
-          checkAbort(myId);
-        }
-      }
-    }
-
-    // ---- ROUND 2: Offense initiates bets on positions defense passed on ----
-    if (unbetPositions.length > 0 && state.wallets[offSide] > 0) {
-      state.phase = 'OFFENSE_BET';
-      if (offSide === 'ai') {
-        state.bets.offenseBets = aiBetAsOffenseInitiate(state, unbetPositions);
-        renderField(state);
-        const anyOffBets = unbetPositions.some(p => (state.bets.offenseBets[p] || 0) > 0);
-        if (anyOffBets) {
-          const betSummary = unbetPositions.map(p => `${posLabel(p)}: $${state.bets.offenseBets[p]}`).join(', ');
-          setInstruction('AI offense is placing bets...');
-          await sleep(600);
-          checkAbort(myId);
-          await showMessage('AI Offense Bets', `Offense bets: ${betSummary}`, 'Respond');
-          checkAbort(myId);
-        }
-      } else {
-        setInstruction('Defense passed — place your offense bets');
-        renderHand([], state);
-        await waitForOffenseInitiateBet(state, unbetPositions);
-        checkAbort(myId);
-        renderField(state);
-      }
-
-      // Defense responds to offense-initiated bets
-      const offBetPositions = unbetPositions.filter(p => (state.bets.offenseBets[p] || 0) > 0);
-      if (offBetPositions.length > 0) {
-        state.phase = 'DEFENSE_RESPOND_OFF';
-        if (defSide === 'ai') {
-          const aiResp = aiBetDefenseRespond(state, state.bets.offenseBets);
-          state.bets.offInitDefResponses = aiResp.responses;
-          state.bets.offInitDefRaises = aiResp.raises;
-          const anyAction = offBetPositions.some(p => aiResp.responses[p] !== 'pass');
-          if (anyAction) {
-            setInstruction('AI defense is responding...');
-            await sleep(600);
-            checkAbort(myId);
-            const respSummary = offBetPositions
-              .map(p => `${posLabel(p)}: ${aiResp.responses[p]}${aiResp.responses[p]==='raise'?' $'+aiResp.raises[p]:''}`).join(', ');
-            await showMessage('AI Defense Response', respSummary, 'Continue');
-            checkAbort(myId);
-          }
-          renderField(state);
-        } else {
-          setInstruction('Respond to offense side bets');
-          renderHand([], state);
-          await waitForDefenseRespondToOffBet(state);
-          checkAbort(myId);
-          renderField(state);
-        }
-
-        // Offense matches defense raises on offense-initiated bets
-        const hasOffRaises = offBetPositions.some(p => (state.bets.offInitDefResponses[p]) === 'raise');
-        if (hasOffRaises) {
-          state.phase = 'OFFENSE_MATCH_DEF';
-          if (offSide === 'ai') {
-            state.bets.offInitOffMatched = aiBetOffenseMatchRaise(state);
-            const matchSummary = offBetPositions.filter(p => state.bets.offInitDefResponses[p]==='raise')
-              .map(p => `${posLabel(p)}: ${state.bets.offInitOffMatched[p]?'matched':'passed'}`).join(', ');
-            setInstruction('AI offense deciding on raises...');
-            await sleep(600);
-            checkAbort(myId);
-            await showMessage('AI Match Decision', matchSummary, 'Continue');
-            checkAbort(myId);
-          } else {
-            setInstruction('Defense raised! Match or pass?');
-            renderHand([], state);
-            await waitForOffenseMatchDefRaise(state);
-            checkAbort(myId);
-          }
-        }
-      }
+      break; // nothing to do, safety
     }
   }
-  // === END BETTING SEQUENCE ===
 
-  state.phase='REVEAL';
+  // ---- Phase 6: Offense picks the rock (reveal of the play) ----
+  state.phase = 'PLACE_ROCK';
+  if (pIsOff) {
+    setInstruction('Place the rock: tap RB (Run) or a WR (Pass)');
+    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+      await tutorialShow('.field', 'All bets are locked. Now pick <b>the rock</b> — the matchup that decides the yards. Run=RB, Pass=WR (card + dice).', 'down');
+    }
+    await waitForRock(state);
+    checkAbort(myId);
+  } else {
+    setInstruction('AI is picking the rock...');
+    await sleep(600);
+    checkAbort(myId);
+    // Simple AI rock pick: pick strongest offense card matchup
+    const scores = positions.map(p => {
+      const oc = state.down.offensePlacements[p];
+      const dc = state.down.defensePlacements[MATCHUPS[p]];
+      return { p, diff: (oc?.value || 0) - (dc?.value || 0) };
+    }).sort((a,b) => b.diff - a.diff);
+    state.down.rockPosition = scores[0].p;
+    renderField(state);
+  }
+
+  // ---- Phase 7: Reveal + dice + resolve ----
+  state.phase = 'REVEAL';
   setInstruction('Revealing cards...');
   renderField(state);
   await revealAllCards();
   checkAbort(myId);
-
-  const isPass = state.down.rockPosition==='wr1'||state.down.rockPosition==='wr2';
-  let oD=null, dD=null;
-
-  if (isPass) {
-    state.phase='DICE_ROLL';
-    setInstruction('Rolling the dice...');
-    oD=rollDice(); dD=rollDice();
-    state.down.offenseDice=oD; state.down.defenseDice=dD;
-    await renderDiceRoll(oD, dD);
-    checkAbort(myId);
+  if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+    await tutorialShow('.field', 'All cards revealed! The <b>rock</b> matchup determines the yards on the play.', 'down');
   }
 
-  state.phase='RESOLVE_DOWN';
+  const isPass = state.down.rockPosition === 'wr1' || state.down.rockPosition === 'wr2';
+  let oD = null, dD = null;
+  if (isPass) {
+    state.phase = 'DICE_ROLL';
+    setInstruction('Rolling the dice...');
+    oD = rollDice(); dD = rollDice();
+    state.down.offenseDice = oD; state.down.defenseDice = dD;
+    await renderDiceRoll(oD, dD);
+    checkAbort(myId);
+    if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+      await tutorialShow('.dice-area', '<b>Pass play</b> — dice totals are added to card values on the rock matchup.', 'up');
+    }
+  }
+
+  state.phase = 'RESOLVE_DOWN';
   const result = resolveDown(state.down.offensePlacements, state.down.defensePlacements, state.down.rockPosition, oD, dD);
   state.down.result = result;
 
-  const sign=result.yards>=0?'+':'';
-  const type=result.yards>0?'positive':result.yards<0?'negative':'neutral';
-  showResult(`${sign}${result.yards} yards | ${result.breakdown}`, type);
-
-  // Resolve side bets after down result
-  if (canBet) {
-    resolveBets(state);
-    persistentWallets = { player: state.wallets.player, ai: state.wallets.ai };
-    renderWallets(state);
-    await showBetResults(state);
-    checkAbort(myId);
+  const sign = result.yards >= 0 ? '+' : '';
+  const type = result.yards > 0 ? 'positive' : result.yards < 0 ? 'negative' : 'neutral';
+  showResult(`${sign}${result.yards} yards`, type);
+  if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+    await tutorialShow('.result-display', 'Result! Positive = offense advances, negative = defense pushes back. 10 yards in 3 downs = first down.', 'up');
   }
+
+  // Resolve side bets after down
+  resolveBets(state);
+  persistentWallets = { player: state.wallets.player, ai: state.wallets.ai };
+  renderWallets(state);
+  if (state.driveNumber === 1 && state.drive.downNumber === 1) {
+    await tutorialShow('.wallet-bar', 'Side bets settled! Winners collect each matchup pot.', 'up');
+  }
+  await showBetResults(state);
+  checkAbort(myId);
 
   setInstruction('');
   await waitForNext();
@@ -2205,11 +3076,27 @@ async function executeDown(state, offCards, defCards, myId) {
   return result;
 }
 
+// ============================================================
+// v2 BETTING HELPERS
+// ============================================================
+function allBetsLockedV2(state) {
+  const b = state.bets;
+  return b.positions.every(p => {
+    if (b.folded[p]) return true;
+    // Locked when amounts are equal AND at least one side has stayed.
+    // (A raise unstays the opponent and creates inequality until they react.)
+    if (b.offense[p] !== b.defense[p]) return false;
+    return b.offStay[p] || b.defStay[p];
+  });
+}
+
+
 async function executePossession(state, offenseSide, myId) {
   state.drive.offenseSide = offenseSide;
   resetDrive(state);
 
-  const offLabel = offenseSide==='player' ? 'You' : 'AI';
+  const offLabel = sideLabel(offenseSide);
+  const scoreKey = offenseSide;
   await showMessage(`${offLabel} on Offense`, `Starting at the 20 yard line. Get 10 yards in 3 downs for a first down!`, 'Start');
   checkAbort(myId);
 
@@ -2217,9 +3104,25 @@ async function executePossession(state, offenseSide, myId) {
 
   while (!possessionOver) {
     // Deal 9 cards to each side for this set of downs
-    ensureDeck(state, 18);
-    const offCards = dealCards(state.deck, 9);
-    const defCards = dealCards(state.deck, 9);
+    let offCards, defCards;
+    if (isOnline()) {
+      if (playerRole === 'host') {
+        ensureDeck(state, 18);
+        offCards = dealCards(state.deck, 9);
+        defCards = dealCards(state.deck, 9);
+        // Send both hands to guest (guest gets the opposite perspective)
+        netSend({ type: 'DEAL', data: { offCards, defCards } });
+      } else {
+        const dealMsg = await waitForNetMessage();
+        checkAbort(myId);
+        offCards = dealMsg.data.offCards;
+        defCards = dealMsg.data.defCards;
+      }
+    } else {
+      ensureDeck(state, 18);
+      offCards = dealCards(state.deck, 9);
+      defCards = dealCards(state.deck, 9);
+    }
 
     // Play 3 downs — players see full hand and pick 3 cards each down
     for (let dn=1; dn<=3; dn++) {
@@ -2237,9 +3140,9 @@ async function executePossession(state, offenseSide, myId) {
 
       if (state.drive.yardLine <= 0) {
         state.drive.yardLine = 0;
-        state.scores[offenseSide] += 7;
+        state.scores[scoreKey] += 7;
         renderScoreboard(state);
-        await showMessage('TOUCHDOWN!', `${offenseSide==='player'?'You':'AI'} scored! +7 points`);
+        await showMessage('TOUCHDOWN!', `${offLabel} scored! +7 points`);
         checkAbort(myId);
         possessionOver = true; break;
       }
@@ -2251,30 +3154,37 @@ async function executePossession(state, offenseSide, myId) {
         checkAbort(myId);
         state.drive.yardsGainedThisSet = 0;
         state.drive.yardsNeededForFirstDown = state.drive.yardLine;
-        break; // Exit the 3-down loop — will continue in the while loop with fresh cards
+        break;
       }
     }
 
     if (possessionOver) break;
 
-    // If first down was earned mid-set, continue to new set of downs
     if (state.drive.hasFirstDown) {
       state.drive.hasFirstDown = false;
       state.drive.downNumber = 1;
-      continue; // New set of 3 downs with fresh 9 cards
+      continue;
     }
 
     // Failed 3 downs — 4th down decision
     let decision;
     if (state.isOvertime) {
-      if (offenseSide==='player') {
-        // In OT, no FG option — just go for it or turnover
-        await showMessage('4th Down - Overtime','No field goals in overtime! You must go for it!');
+      decision = 'go';
+      const otLabel = isLocalSide(offenseSide) ? 'You must' : `${offLabel} must`;
+      await showMessage('4th Down - Overtime',`No field goals in overtime! ${otLabel} go for it!`);
+      checkAbort(myId);
+    } else if (isOnline()) {
+      // Online: local offense player chooses, remote waits
+      if (isLocalSide(offenseSide)) {
+        decision = await showFourthDownChoice();
         checkAbort(myId);
-        decision = 'go';
+        netSend({ type: 'FOURTH_DOWN', data: { decision } });
       } else {
-        decision = 'go';
-        await showMessage('4th Down - Overtime','AI must go for it! No field goals in overtime!');
+        setInstruction('Waiting for opponent\'s 4th down decision...');
+        const fdMsg = await waitForNetMessage();
+        checkAbort(myId);
+        decision = fdMsg.data.decision;
+        await showMessage('4th Down',`Opponent chose to ${decision==='fg'?'kick a Field Goal':'go for it'}!`);
         checkAbort(myId);
       }
     } else if (offenseSide==='player') {
@@ -2287,22 +3197,34 @@ async function executePossession(state, offenseSide, myId) {
     }
 
     if (decision==='fg') {
-      state.scores[offenseSide] += 3;
+      state.scores[scoreKey] += 3;
       renderScoreboard(state);
-      await showMessage('Field Goal!',`${offenseSide==='player'?'You':'AI'} scored 3 points!`);
+      await showMessage('Field Goal!',`${offLabel} scored 3 points!`);
       checkAbort(myId);
       possessionOver = true;
     } else {
       // 4th down: deal 3 new cards each
-      ensureDeck(state, 6);
-      const o4=dealCards(state.deck,3), d4=dealCards(state.deck,3);
+      let o4, d4;
+      if (isOnline()) {
+        if (playerRole === 'host') {
+          ensureDeck(state, 6);
+          o4 = dealCards(state.deck, 3); d4 = dealCards(state.deck, 3);
+          netSend({ type: 'DEAL', data: { offCards: o4, defCards: d4 } });
+        } else {
+          const dealMsg = await waitForNetMessage();
+          checkAbort(myId);
+          o4 = dealMsg.data.offCards; d4 = dealMsg.data.defCards;
+        }
+      } else {
+        ensureDeck(state, 6);
+        o4 = dealCards(state.deck, 3); d4 = dealCards(state.deck, 3);
+      }
       resetDown(state);
       state.drive.downNumber = 4;
       const result = await executeDown(state, o4, d4, myId);
 
       state.drive.yardLine = Math.max(0, state.drive.yardLine - result.yards);
 
-      // Check if 4th down converted (gained enough for first down)
       const yardsGained4th = state.drive.yardsGainedThisSet + result.yards;
       if (yardsGained4th >= state.drive.yardsNeededForFirstDown && state.drive.yardLine > 0) {
         await showMessage('First Down!','Converted on 4th down!');
@@ -2310,7 +3232,7 @@ async function executePossession(state, offenseSide, myId) {
         state.drive.yardsGainedThisSet=0;
         state.drive.yardsNeededForFirstDown=state.drive.yardLine;
         state.drive.hasFirstDown=true;
-        continue; // Continue possession with new downs
+        continue;
       }
 
       state.discardPile.push(...Object.values(state.down.offensePlacements).filter(Boolean));
@@ -2318,9 +3240,9 @@ async function executePossession(state, offenseSide, myId) {
 
       if (state.drive.yardLine<=0) {
         state.drive.yardLine=0;
-        state.scores[offenseSide]+=6;
+        state.scores[scoreKey]+=7;
         renderScoreboard(state);
-        await showMessage('TOUCHDOWN!',`${offenseSide==='player'?'You':'AI'} scored on 4th down! +7 points`);
+        await showMessage('TOUCHDOWN!',`${offLabel} scored on 4th down! +7 points`);
         checkAbort(myId);
       } else {
         await showMessage('Turnover on Downs','Failed to convert. Possession over.');
@@ -2339,14 +3261,30 @@ async function executeOvertimePossession(state, offenseSide, myId) {
   state.drive.yardsNeededForFirstDown = 5;
   state.drive.hasFirstDown = true; // Always "& Goal" in OT
 
-  const offLabel = offenseSide==='player' ? 'You' : 'AI';
+  const offLabel = sideLabel(offenseSide);
+  const scoreKey = offenseSide;
   await showMessage(`OT — ${offLabel} on Offense`, '3 downs from the 5 yard line. 9 cards. Score to win!', 'Go');
   checkAbort(myId);
 
   // Deal 9 cards each for 3 downs
-  ensureDeck(state, 18);
-  const offCards = dealCards(state.deck, 9);
-  const defCards = dealCards(state.deck, 9);
+  let offCards, defCards;
+  if (isOnline()) {
+    if (playerRole === 'host') {
+      ensureDeck(state, 18);
+      offCards = dealCards(state.deck, 9);
+      defCards = dealCards(state.deck, 9);
+      netSend({ type: 'DEAL', data: { offCards, defCards } });
+    } else {
+      const dealMsg = await waitForNetMessage();
+      checkAbort(myId);
+      offCards = dealMsg.data.offCards;
+      defCards = dealMsg.data.defCards;
+    }
+  } else {
+    ensureDeck(state, 18);
+    offCards = dealCards(state.deck, 9);
+    defCards = dealCards(state.deck, 9);
+  }
 
   let scored = false;
 
@@ -2365,9 +3303,9 @@ async function executeOvertimePossession(state, offenseSide, myId) {
 
     if (state.drive.yardLine <= 0) {
       state.drive.yardLine = 0;
-      state.scores[offenseSide] += 7;
+      state.scores[scoreKey] += 7;
       renderScoreboard(state);
-      await showMessage('TOUCHDOWN!', `${offenseSide==='player'?'You':'AI'} scored in overtime! +7 points`);
+      await showMessage('TOUCHDOWN!', `${offLabel} scored in overtime! +7 points`);
       checkAbort(myId);
       scored = true;
       break;
@@ -2375,7 +3313,7 @@ async function executeOvertimePossession(state, offenseSide, myId) {
   }
 
   if (!scored) {
-    await showMessage('No Score', `${offenseSide==='player'?'You':'AI'} failed to reach the end zone. ${state.drive.yardLine} yards short.`);
+    await showMessage('No Score', `${offLabel} failed to reach the end zone. ${state.drive.yardLine} yards short.`);
     checkAbort(myId);
   }
 }
@@ -2384,11 +3322,12 @@ async function startGame() {
   const myId = gameId;
   state = createState();
   state.deck = shuffleDeck(createDeck());
+  // Scoreboard labels are static "Player 1" / "Player 2"; wallet labels swap via renderWallets based on offense side
+  const oppLabel = 'Player 2';
   renderScoreboard(state);
   renderGameInfo(state);
   hideResult(); hideDiceArea(); hideBettingPanel();
   renderHand([], state);
-  unlockConfig();
   // Show carried-over balance if exists
   if (persistentWallets) {
     state.wallets.player = persistentWallets.player;
@@ -2397,25 +3336,51 @@ async function startGame() {
   renderWallets(state);
 
   try {
-    const contMsg = persistentWallets ? ` (You: $${persistentWallets.player} | AI: $${persistentWallets.ai})` : '';
-    setInstruction('Set your bets!' + contMsg);
-    setActionBtn('Set your bets!', false, null);
-    await waitForConfig();
-    checkAbort(myId);
+    const oppLabel = sideLabel('ai');
 
+    if (isOnline()) {
+      // Online: config was set in lobby, apply it directly
+      $('.config-bar').style.display = 'none';
+      if (onlineConfig) {
+        state.buyIn = onlineConfig.buyIn;
+        state.startingBalance = onlineConfig.startingBalance;
+      }
+      if (persistentWallets === null) {
+        state.wallets.player = state.startingBalance;
+        state.wallets.ai = state.startingBalance;
+      } else {
+        state.wallets.player = persistentWallets.player;
+        state.wallets.ai = persistentWallets.ai;
+      }
+      state.wallets.player -= state.buyIn;
+      state.wallets.ai -= state.buyIn;
+      state.pot = state.buyIn * 2;
+      renderWallets(state);
+    } else {
+      // AI mode: local player sets config
+      unlockConfig();
+      const contMsg = persistentWallets ? ` (You: $${persistentWallets.player} | ${oppLabel}: $${persistentWallets.ai})` : '';
+      setInstruction('Set your bets!' + contMsg);
+      setActionBtn('Set your bets!', false, null);
+      await tutorialShow('.config-bar', 'Set your <b>buy-in</b> (ante per game) and <b>starting balance</b>. Both players put the buy-in into the pot. The football winner takes the pot!', 'up');
+      await waitForConfig();
+      checkAbort(myId);
+    }
+
+    await tutorialShow('.wallet-bar', 'This is the <b>wallet bar</b>. Your credits are on the left, the pot in the middle, and the opponent\'s credits on the right. Side bets come from your credits.', 'up');
     await showMessage('Ball Crap',`Football meets Craps! Buy-in: $${state.buyIn}. Pot: $${state.pot}. Winner takes all!`,'Let\'s Go!');
     checkAbort(myId);
+    await tutorialShow('.scoreboard', 'The <b>scoreboard</b> tracks points. Touchdowns are worth 7, field goals 3. Two drives each — you play offense first, then defense.', 'up');
+    await tutorialShow('.game-info', 'This shows the current <b>drive</b>, <b>down</b>, and <b>yard line</b>. Get 10 yards in 3 downs for a first down. Reach the end zone to score!', 'up');
 
-    // Player on offense
+    // Always 'player' first offense, 'ai' second — in online mode host='player', guest='ai'
     state.driveNumber = 1;
     await executePossession(state, 'player', myId);
     checkAbort(myId);
 
-    // Switch sides
-    await showMessage('Switching Sides!',`Score: You ${state.scores.player} - AI ${state.scores.ai}. Now the AI goes on offense!`,'Continue');
+    await showMessage('Switching Sides!',`Score: You ${state.scores.player} - ${oppLabel} ${state.scores.ai}. Now ${oppLabel} goes on offense!`,'Continue');
     checkAbort(myId);
 
-    // AI on offense
     state.driveNumber = 2;
     await executePossession(state, 'ai', myId);
     checkAbort(myId);
@@ -2429,36 +3394,35 @@ async function startGame() {
         await showMessage('Overtime!',`Round ${state.overtimeRound} — 3 downs each, 5 yard line, 9 cards. Score to win!`,'Start OT');
         checkAbort(myId);
 
-        // Both sides always get a chance in each OT round
         const scoreBefore = { player: state.scores.player, ai: state.scores.ai };
 
-        // Player OT possession
         await executeOvertimePossession(state, 'player', myId);
         checkAbort(myId);
 
-        const playerScored = state.scores.player > scoreBefore.player;
-        if (playerScored) {
-          await showMessage('AI Must Answer!', `You scored! AI gets a chance to match.`, 'Continue');
+        const firstScored = state.scores.player > scoreBefore.player || state.scores.ai > scoreBefore.ai;
+        if (firstScored) {
+          await showMessage(`${oppLabel} Must Answer!`, `You scored! ${oppLabel} gets a chance to match.`, 'Continue');
           checkAbort(myId);
         }
 
-        // AI OT possession
         await executeOvertimePossession(state, 'ai', myId);
         checkAbort(myId);
-
-        // After both play, check: if still tied, loop again
-        // If different, the while condition will exit
       }
     }
 
     const winnerSide = state.scores.player>state.scores.ai ? 'player' : 'ai';
-    const winnerLabel = winnerSide === 'player' ? 'You Win!' : 'AI Wins!';
+    const winnerLabel = isLocalSide(winnerSide) ? 'You Win!' : `${oppLabel} Wins!`;
     state.wallets[winnerSide] += state.pot;
     state.pot = 0;
     persistentWallets = { player: state.wallets.player, ai: state.wallets.ai };
     renderWallets(state);
-    await showMessage('Game Over!',`${winnerLabel} Final: You ${state.scores.player} - AI ${state.scores.ai}. Pot ($${state.buyIn * 2}) awarded! Your credits: $${state.wallets.player}`,'Play Again');
-    startGame();
+    await showMessage('Game Over!',`${winnerLabel} Final: You ${state.scores.player} - ${oppLabel} ${state.scores.ai}. Pot ($${state.buyIn * 2}) awarded!`,'Play Again');
+    if (isOnline()) {
+      netDisconnect();
+      showModeSelect();
+    } else {
+      startGame();
+    }
 
   } catch(e) {
     if (e.message !== 'GAME_ABORTED') throw e;
@@ -2466,10 +3430,106 @@ async function startGame() {
   }
 }
 
+// ============================================================
+// TUTORIAL ENGINE
+// ============================================================
+let tutorialActive = false;
+let tutorialStepResolve = null;
+
+function tutorialInit() {
+  const skip = localStorage.getItem('ballCrap_skipTutorial') === 'true';
+  $('#tutorialSkip').checked = skip;
+  tutorialActive = !skip;
+}
+
+function tutorialIsActive() { return tutorialActive; }
+
+function tutorialSkipAll() {
+  tutorialActive = false;
+  tutorialDismiss();
+}
+
+function tutorialDismiss() {
+  const overlay = $('#tutorialOverlay');
+  const tooltip = $('#tutorialTooltip');
+  if (overlay) overlay.style.display = 'none';
+  if (tooltip) tooltip.style.display = 'none';
+  $$('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+  if (tutorialStepResolve) { tutorialStepResolve(); tutorialStepResolve = null; }
+}
+
+function tutorialShow(targetSel, text, arrowDir) {
+  if (!tutorialActive) return Promise.resolve();
+  return new Promise(resolve => {
+    tutorialStepResolve = resolve;
+    const overlay = $('#tutorialOverlay');
+    const tooltip = $('#tutorialTooltip');
+    const textEl = $('.tutorial-tooltip__text', tooltip);
+    const arrow = $('.tutorial-arrow', tooltip);
+
+    // Reset
+    overlay.style.display = 'block';
+    tooltip.style.display = 'block';
+    arrow.className = 'tutorial-arrow';
+    textEl.innerHTML = text;
+
+    // Highlight target
+    $$('.tutorial-highlight').forEach(e => e.classList.remove('tutorial-highlight'));
+    const target = targetSel ? $(targetSel) : null;
+    if (target) target.classList.add('tutorial-highlight');
+
+    // Position tooltip near target
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      const dir = arrowDir || 'up';
+      arrow.classList.add('tutorial-arrow--' + dir);
+
+      if (dir === 'up') {
+        tooltip.style.top = (rect.bottom + 12) + 'px';
+        tooltip.style.left = Math.max(8, Math.min(window.innerWidth - 290, rect.left + rect.width / 2 - 140)) + 'px';
+      } else if (dir === 'down') {
+        tooltip.style.top = (rect.top - tooltip.offsetHeight - 12) + 'px';
+        tooltip.style.left = Math.max(8, Math.min(window.innerWidth - 290, rect.left + rect.width / 2 - 140)) + 'px';
+      } else if (dir === 'left') {
+        tooltip.style.top = (rect.top + rect.height / 2 - 40) + 'px';
+        tooltip.style.left = (rect.right + 12) + 'px';
+      } else {
+        tooltip.style.top = (rect.top + rect.height / 2 - 40) + 'px';
+        tooltip.style.left = (rect.left - tooltip.offsetWidth - 12) + 'px';
+      }
+    } else {
+      // Center on screen
+      tooltip.style.top = '50%';
+      tooltip.style.left = '50%';
+      tooltip.style.transform = 'translate(-50%, -50%)';
+      arrow.style.display = 'none';
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   window.DEBUG_STATE = () => state;
-  startGame();
+
+  // Tutorial toggle — persist preference
+  const skipCb = $('#tutorialSkip');
+  skipCb.checked = localStorage.getItem('ballCrap_skipTutorial') === 'true';
+  skipCb.addEventListener('change', () => {
+    localStorage.setItem('ballCrap_skipTutorial', skipCb.checked ? 'true' : 'false');
+  });
+
+  showModeSelect();
 });
 </script>
+
+<!-- Tutorial tooltip container -->
+<div id="tutorialOverlay" class="tutorial-overlay" style="display:none"></div>
+<div id="tutorialTooltip" class="tutorial-tooltip" style="display:none">
+  <div class="tutorial-arrow"></div>
+  <div class="tutorial-tooltip__text"></div>
+  <div class="tutorial-tooltip__btns">
+    <button class="tutorial-tooltip__btn tutorial-tooltip__btn--skip" onclick="tutorialSkipAll()">Skip All</button>
+    <button class="tutorial-tooltip__btn tutorial-tooltip__btn--next" onclick="tutorialDismiss()">Got It</button>
+  </div>
+</div>
 </body>
 </html>

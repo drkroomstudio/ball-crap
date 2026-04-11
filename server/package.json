@@ -1,0 +1,12 @@
+{
+  "name": "ball-crap-relay",
+  "version": "1.0.0",
+  "description": "Lightweight WebSocket relay for Ball Crap multiplayer",
+  "main": "relay.js",
+  "scripts": {
+    "start": "node relay.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
